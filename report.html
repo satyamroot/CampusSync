@@ -3,353 +3,279 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Report Lost / Found — CampusSync</title>
+  <title>Report Item — CampusSync</title>
   <link rel="icon" type="image/svg+xml" href="assets/favicon/favicon.svg">
-  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon/favicon-32x32.png">
-  <link rel="apple-touch-icon" href="assets/favicon/apple-touch-icon.png">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-  <!-- HEADER & NAVIGATION -->
-  <header class="site-header">
-    <div class="container header-container">
-      <a href="index.html" class="logo">
-        <img src="assets/images/logo.svg" alt="CampusSync Logo" class="logo-icon-svg">
-        <span class="logo-text">Campus<strong>Sync</strong></span>
-      </a>
+  <div class="app-layout">
 
-      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu">
-        <span class="hamburger-bar"></span>
-        <span class="hamburger-bar"></span>
-        <span class="hamburger-bar"></span>
-      </button>
-
-      <nav class="site-nav" id="siteNav">
-        <ul class="nav-list">
-          <li><a href="index.html" class="nav-link">Home</a></li>
-          <li><a href="lost-found.html" class="nav-link">Lost &amp; Found</a></li>
-          <li><a href="spaces.html" class="nav-link">Spaces</a></li>
-          <li><a href="events.html" class="nav-link">Events</a></li>
-        </ul>
-      </nav>
-
-      <!-- Action Controls -->
-      <div class="header-actions">
-        <button class="icon-action-btn" id="savedItemsBtn" title="Saved Items" aria-label="Saved items">
-          <span>🔖</span>
-          <span class="notif-badge-pill" id="savedCountBadge" style="display: none;">0</span>
-        </button>
-
-        <div class="notif-wrapper">
-          <button class="icon-action-btn" id="notifBtn" title="CampusSync Notifications" aria-label="Notifications">
-            <span>🔔</span>
-            <span class="notif-badge-pill" id="notifBadge" style="display: none;">0</span>
-          </button>
-          <div class="notif-dropdown" id="notifDropdown">
-            <div class="notif-header">
-              <h4>Notifications (Prototype)</h4>
-              <button class="btn btn-outline btn-sm" id="clearNotifsBtn" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">Clear</button>
-            </div>
-            <div class="notif-list" id="notifList"></div>
-          </div>
-        </div>
-
-        <a href="report.html" class="btn btn-primary nav-btn-primary active">Report Lost / Found</a>
+    <!-- DESKTOP SIDEBAR -->
+    <aside class="app-sidebar">
+      <div class="sidebar-header">
+        <a href="index.html" class="sidebar-logo">
+          <div class="sidebar-logo-icon">⚡</div>
+          <span class="sidebar-logo-text">Campus<strong>Sync</strong></span>
+        </a>
+        <button id="sidebarCloseBtn" class="topbar-btn" style="display: none;" aria-label="Close sidebar">&times;</button>
       </div>
-    </div>
-  </header>
 
-  <!-- MAIN CONTENT -->
-  <main class="page-main">
-    <div class="container">
+      <div class="sidebar-nav-container">
+        <span class="sidebar-section-title">Navigation</span>
+        <ul class="sidebar-menu">
+          <li>
+            <a href="index.html" class="sidebar-link">
+              <span class="sidebar-link-icon">🏠</span>
+              <span>Home</span>
+            </a>
+          </li>
+          <li>
+            <a href="navigation.html" class="sidebar-link">
+              <span class="sidebar-link-icon">📍</span>
+              <span>Where is your Block?</span>
+              <span class="sidebar-badge badge-live">LIVE</span>
+            </a>
+          </li>
+          <li>
+            <a href="lost-found.html" class="sidebar-link active">
+              <span class="sidebar-link-icon">🔎</span>
+              <span>Lost &amp; Found</span>
+            </a>
+          </li>
+          <li>
+            <a href="spaces.html" class="sidebar-link">
+              <span class="sidebar-link-icon">🏫</span>
+              <span>Spaces</span>
+            </a>
+          </li>
+          <li>
+            <a href="events.html" class="sidebar-link">
+              <span class="sidebar-link-icon">📅</span>
+              <span>Events</span>
+            </a>
+          </li>
+          <li>
+            <a href="navigation.html" class="sidebar-link">
+              <span class="sidebar-link-icon">🗺️</span>
+              <span>Campus Map</span>
+            </a>
+          </li>
+        </ul>
+      </div>
 
-      <!-- PAGE HEADER -->
-      <section class="page-header">
-        <div class="page-header-text">
-          <span class="badge badge-primary">Lost &amp; Found Intake</span>
-          <h1 class="page-title">Report an Item</h1>
-          <p class="page-subtitle">
-            Log a lost belonging or report an item you found on campus.
-            Accurate details help our multi-criteria matching engine discover potential matches.
-          </p>
+      <div class="sidebar-footer">
+        <a href="#" class="sidebar-user profile-trigger-btn">
+          <div class="user-avatar">SG</div>
+          <div class="user-info">
+            <div class="user-name">Shivom Gupta</div>
+            <div class="user-dept">B.Tech CSE • 1st Year</div>
+          </div>
+        </a>
+      </div>
+    </aside>
+
+    <!-- MAIN WRAPPER -->
+    <div class="app-main">
+
+      <header class="mobile-header-bar">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <button id="mobileMenuBtn" class="topbar-btn">☰</button>
+          <a href="index.html" class="sidebar-logo">
+            <span class="sidebar-logo-text">Campus<strong>Sync</strong></span>
+          </a>
         </div>
-      </section>
+      </header>
 
-      <!-- REPORT LAYOUT: FORM + GUIDELINES SIDEBAR -->
-      <div class="report-layout">
+      <main class="page-content-wrapper" style="max-width: 850px;">
 
-        <!-- FORM CARD -->
-        <div class="card form-card">
+        <div style="margin-bottom: 1.75rem;">
+          <a href="lost-found.html" class="btn btn-outline btn-sm" style="margin-bottom: 0.75rem;">&larr; Back to Lost &amp; Found</a>
+          <h1 style="color: #fff; font-size: 2rem; font-weight: 800; margin-bottom: 0.35rem;">Report an Item</h1>
+          <p style="color: var(--text-muted);">Log a lost belonging or report an item you found on campus.</p>
+        </div>
 
-          <!-- TYPE SELECTOR TABS -->
-          <div class="type-toggle-container">
-            <label class="toggle-label">What are you reporting?</label>
-            <div class="segmented-control" role="tablist">
-              <button type="button" class="segmented-btn active" id="tabLost" data-type="lost" role="tab" aria-selected="true">
-                <span class="btn-dot dot-lost"></span> I Lost an Item
-              </button>
-              <button type="button" class="segmented-btn" id="tabFound" data-type="found" role="tab" aria-selected="false">
-                <span class="btn-dot dot-found"></span> I Found an Item
-              </button>
+        <div class="glass-card" style="padding: 2rem;">
+          <form id="dedicatedReportForm">
+            <!-- Type Selector Tabs -->
+            <div class="filter-type-segmented" style="width: 100%; display: grid; grid-template-columns: 1fr 1fr; margin-bottom: 1.5rem;">
+              <button type="button" class="filter-segment-btn active" id="tabDedicLost">I Lost an Item</button>
+              <button type="button" class="filter-segment-btn" id="tabDedicFound">I Found an Item</button>
             </div>
-          </div>
+            <input type="hidden" id="dedicTypeInput" value="lost">
 
-          <!-- SUCCESS / ERROR NOTIFICATION BOX -->
-          <div id="formAlert" class="alert-box" style="display: none; padding: 1rem 1.25rem; border-radius: var(--radius-md); margin-bottom: 1.5rem;" role="alert">
-            <span class="alert-icon" id="alertIcon" style="font-size: 1.3rem; margin-right: 0.5rem;">✅</span>
-            <div class="alert-content">
-              <strong id="alertTitle" style="color: #fff; display: block;">Report Saved Successfully!</strong>
-              <p id="alertMessage" style="font-size: 0.9rem; margin: 0.2rem 0 0; color: #cbd5e1;">Your report has been saved.</p>
-            </div>
-          </div>
-
-          <!-- REPORT INTAKE FORM -->
-          <form id="reportForm" novalidate>
-            <!-- Hidden field storing the report type (lost or found) -->
-            <input type="hidden" id="itemType" name="type" value="lost">
-
-            <!-- Field 1: Item Name -->
-            <div class="form-group">
-              <label for="itemName" class="form-label">
-                Item Name <span class="required">*</span>
-              </label>
-              <input
-                type="text"
-                id="itemName"
-                name="itemName"
-                class="form-control"
-                placeholder="e.g. Black Leather Wallet, Casio fx-991EX Calculator"
-                required
-              >
-              <span class="form-hint" id="itemNameError" style="color: var(--accent-rose); display: none;">Please enter an item name.</span>
+            <!-- File upload -->
+            <div class="form-group" style="margin-bottom: 1.25rem;">
+              <label class="form-label">Upload Image (Optional)</label>
+              <div class="file-upload-zone" id="dedicFileDropzone">
+                <input type="file" id="dedicFileInput" accept="image/*" style="display: none;">
+                <div id="dedicPrompt">
+                  <span style="font-size: 2rem; display: block; margin-bottom: 0.25rem;">📷</span>
+                  <span style="font-size: 0.9rem; color: var(--accent-primary); font-weight: 600;">Click to select photo</span>
+                  <span style="font-size: 0.75rem; color: var(--text-dim); display: block; margin-top: 0.2rem;">PNG, JPG, WebP up to 5MB</span>
+                </div>
+                <img id="dedicPreview" class="file-preview-img" style="display: none;" alt="Preview">
+              </div>
             </div>
 
-            <!-- Two Column Row: Category & Colour -->
-            <div class="form-row">
-              <!-- Field 2: Category -->
-              <div class="form-group col">
-                <label for="category" class="form-label">
-                  Category <span class="required">*</span>
-                </label>
-                <select id="category" name="category" class="form-control" required>
+            <!-- Item Name -->
+            <div class="form-group" style="margin-bottom: 1.25rem;">
+              <label class="form-label" for="dedicItemName">Item Name <span style="color: var(--accent-rose);">*</span></label>
+              <input type="text" id="dedicItemName" class="form-input" placeholder="e.g. AirPods Case, Black Backpack" required>
+            </div>
+
+            <!-- Category & Colour -->
+            <div class="form-row-2col" style="margin-bottom: 1.25rem;">
+              <div class="form-group">
+                <label class="form-label" for="dedicCategory">Category <span style="color: var(--accent-rose);">*</span></label>
+                <select id="dedicCategory" class="form-select" required>
                   <option value="" disabled selected>Select category</option>
-                  <option value="Personal">Personal (Wallets, Bags, Bottles)</option>
-                  <option value="Electronics">Electronics (Calculators, Laptops, Earbuds)</option>
-                  <option value="Cards/IDs">Cards &amp; ID Badges</option>
-                  <option value="Books/Notes">Books &amp; Notebooks</option>
-                  <option value="Clothing">Clothing &amp; Accessories</option>
-                  <option value="Other">Other Items</option>
+                  <option value="Electronics">Electronics</option>
+                  <option value="Bags">Bags</option>
+                  <option value="Cards/IDs">ID Cards</option>
+                  <option value="Personal">Wallets &amp; Personal</option>
+                  <option value="Books/Notes">Books &amp; Notes</option>
+                  <option value="Keys">Keys</option>
+                  <option value="Clothing">Clothing</option>
+                  <option value="Other">Other</option>
                 </select>
-                <span class="form-hint" id="categoryError" style="color: var(--accent-rose); display: none;">Please select a category.</span>
               </div>
-
-              <!-- Field 3: Colour -->
-              <div class="form-group col">
-                <label for="colour" class="form-label">
-                  Colour <span class="required">*</span>
-                </label>
-                <input
-                  type="text"
-                  id="colour"
-                  name="colour"
-                  class="form-control"
-                  placeholder="e.g. Black, Navy Blue, Silver"
-                  required
-                >
-                <span class="form-hint" id="colourError" style="color: var(--accent-rose); display: none;">Please specify the colour.</span>
+              <div class="form-group">
+                <label class="form-label" for="dedicColour">Colour <span style="color: var(--accent-rose);">*</span></label>
+                <input type="text" id="dedicColour" class="form-input" placeholder="e.g. Black, White, Silver" required>
               </div>
             </div>
 
-            <!-- Two Column Row: Location & Date -->
-            <div class="form-row">
-              <!-- Field 4: Location -->
-              <div class="form-group col">
-                <label for="location" class="form-label">
-                  Campus Location <span class="required">*</span>
-                </label>
-                <input
-                  type="text"
-                  id="location"
-                  name="location"
-                  class="form-control"
-                  placeholder="e.g. Central Library 2nd Floor, Lab 3"
-                  required
-                >
-                <span class="form-hint" id="locationError" style="color: var(--accent-rose); display: none;">Please enter the campus location.</span>
+            <!-- Location & Date -->
+            <div class="form-row-2col" style="margin-bottom: 1.25rem;">
+              <div class="form-group">
+                <label class="form-label" for="dedicLocation">Campus Location <span style="color: var(--accent-rose);">*</span></label>
+                <input type="text" id="dedicLocation" class="form-input" placeholder="e.g. Central Library 2nd Floor, Block S" required>
               </div>
-
-              <!-- Field 5: Date -->
-              <div class="form-group col">
-                <label for="date" class="form-label">
-                  Date <span class="required">*</span>
-                </label>
-                <input
-                  type="date"
-                  id="date"
-                  name="date"
-                  class="form-control"
-                  required
-                >
-                <span class="form-hint" id="dateError" style="color: var(--accent-rose); display: none;">Please select the date.</span>
+              <div class="form-group">
+                <label class="form-label" for="dedicDate">Date <span style="color: var(--accent-rose);">*</span></label>
+                <input type="date" id="dedicDate" class="form-input" required>
               </div>
             </div>
 
-            <!-- Field 6: Description -->
-            <div class="form-group">
-              <label for="description" class="form-label">
-                Detailed Description <span class="required">*</span>
+            <!-- Description -->
+            <div class="form-group" style="margin-bottom: 1.25rem;">
+              <label class="form-label" for="dedicDesc">Description &amp; Identifying Details <span style="color: var(--accent-rose);">*</span></label>
+              <textarea id="dedicDesc" class="form-textarea" rows="4" placeholder="Include unique scratches, stickers, brand marks..." required></textarea>
+            </div>
+
+            <!-- Contact Email -->
+            <div class="form-group" style="margin-bottom: 1.75rem;">
+              <label class="form-label" for="dedicEmail">
+                Contact Email <span style="color: var(--accent-rose);">*</span>
+                <span style="color: var(--accent-primary); font-size: 0.75rem;">(Private • Protected)</span>
               </label>
-              <textarea
-                id="description"
-                name="description"
-                rows="4"
-                class="form-control"
-                placeholder="Include unique identifying marks, brand names, model numbers, or specific contents (e.g. 'Casio fx-991EX with initials DK on back')..."
-                required
-              ></textarea>
-              <span class="form-hint" id="descriptionError" style="color: var(--accent-rose); display: none;">Please enter a description.</span>
+              <input type="email" id="dedicEmail" class="form-input" placeholder="yourname@campus.edu" required>
             </div>
 
-            <!-- Field 7: Contact Email (Private) -->
-            <div class="form-group">
-              <label for="contactEmail" class="form-label">
-                Contact Email <span class="required">*</span>
-                <span style="font-size: 0.8rem; font-weight: normal; color: #38bdf8;">(Kept Private)</span>
-              </label>
-              <input
-                type="email"
-                id="contactEmail"
-                name="contactEmail"
-                class="form-control"
-                placeholder="e.g. yourname@campus.edu"
-                required
-              >
-              <span class="form-hint" id="contactError" style="color: var(--accent-rose); display: none;">Please enter a valid contact email.</span>
-              <span class="form-hint" style="color: #7dd3fc; margin-top: 0.35rem;">
-                🔒 <strong>Privacy Guardrail:</strong> Your email will NOT appear publicly on cards. In the future backend version, it will be used for private notification matching.
-              </span>
-            </div>
-
-            <!-- FORM ACTIONS -->
-            <div class="form-actions">
-              <button type="submit" id="submitBtn" class="btn btn-primary btn-large">
-                Report Lost Item
-              </button>
-              <button type="reset" id="resetBtn" class="btn btn-outline">
-                Clear Form
-              </button>
-            </div>
+            <button type="submit" class="btn btn-primary btn-large" style="width: 100%;">
+              Submit Report
+            </button>
           </form>
         </div>
 
-        <!-- SIDEBAR: MATCHING RULES & PRIVACY -->
-        <aside class="report-sidebar" style="display: flex; flex-direction: column; gap: 1.5rem;">
-          <!-- Card 1: Multi-Criteria Matching -->
-          <div class="card" style="background: var(--bg-glass-card); border: 1px solid var(--border); border-radius: var(--card-radius); padding: 1.75rem; backdrop-filter: var(--glass-blur);">
-            <h3 style="color: #fff; font-size: 1.2rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
-              <span>⚡</span> Rule-Based Matching
-            </h3>
-            <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.55; margin-bottom: 1rem;">
-              CampusSync automatically compares your report against opposite submissions (Lost against Found) using a deterministic scoring formula:
-            </p>
-            <ul style="list-style: none; font-size: 0.88rem; color: #cbd5e1; margin-bottom: 1rem;">
-              <li style="padding: 0.4rem 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between;">
-                <span>Same Category</span>
-                <strong style="color: #38bdf8;">+3 pts</strong>
-              </li>
-              <li style="padding: 0.4rem 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between;">
-                <span>Same Colour</span>
-                <strong style="color: #38bdf8;">+2 pts</strong>
-              </li>
-              <li style="padding: 0.4rem 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between;">
-                <span>Same Location</span>
-                <strong style="color: #38bdf8;">+2 pts</strong>
-              </li>
-              <li style="padding: 0.4rem 0; display: flex; justify-content: space-between;">
-                <span>Similar Description</span>
-                <strong style="color: #38bdf8;">+1 pt</strong>
-              </li>
-            </ul>
-            <div style="background: rgba(0,0,0,0.3); padding: 0.6rem 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border); font-size: 0.85rem; color: #fcd34d;">
-              <strong>Max Score: 8/8</strong> — Scores &ge; 4 are highlighted on the Smart Match Radar as <em>"Possible Match"</em>.
-            </div>
-          </div>
-
-          <!-- Card 2: Student Privacy Notice -->
-          <div class="card" style="background: var(--bg-glass-card); border: 1px solid var(--border); border-left: 4px solid #38bdf8; border-radius: var(--card-radius); padding: 1.75rem; backdrop-filter: var(--glass-blur);">
-            <h3 style="color: #fff; font-size: 1.15rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
-              <span>🛡️</span> Privacy Guarantee
-            </h3>
-            <p style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.55;">
-              No student personal email is ever exposed to the public web.
-              In this prototype, submissions are stored in your browser session.
-              Matches are always presented cautiously as <em>"Possible Match"</em> so finders and owners verify in person.
-            </p>
-          </div>
-        </aside>
-
-      </div>
-    </div>
-  </main>
-
-  <!-- SAVED ITEMS MODAL -->
-  <div class="custom-modal" id="savedItemsModal" role="dialog" aria-label="Saved items">
-    <div class="modal-dialog">
-      <div class="modal-header">
-        <h3 style="color: #fff; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
-          <span>🔖</span> Saved Bookmarks
-        </h3>
-        <button class="modal-close" id="closeSavedModal">&times;</button>
-      </div>
-      <div class="saved-tabs-row">
-        <button class="saved-tab-btn active" id="savedTabEvents">Saved Events</button>
-        <button class="saved-tab-btn" id="savedTabSpaces">Saved Spaces</button>
-      </div>
-      <div class="saved-items-list" id="savedItemsList"></div>
+      </main>
     </div>
   </div>
 
-  <!-- FOOTER -->
-  <footer class="site-footer">
-    <div class="container footer-container">
-      <div class="footer-info">
-        <div class="footer-logo">
-          <img src="assets/images/logo.svg" alt="CampusSync" style="display: inline-block; width: 24px; height: 24px; vertical-align: middle; margin-right: 6px;">
-          Campus<strong>Sync</strong>
-        </div>
-        <p class="footer-tagline">Your Campus, In Sync. One platform for everyday campus discovery.</p>
-        <p class="footer-credit">Built by a team of 4 first-semester B.Tech CSE students for a 36-Hour Hackathon.</p>
-      </div>
-
-      <div class="footer-nav">
-        <h4>Navigation</h4>
-        <ul>
-          <li><a href="index.html">Home</a></li>
-          <li><a href="lost-found.html">Lost &amp; Found</a></li>
-          <li><a href="report.html">Report Lost / Found</a></li>
-          <li><a href="spaces.html">Campus Spaces</a></li>
-          <li><a href="events.html">Campus Events</a></li>
-        </ul>
-      </div>
-
-      <div class="footer-disclaimer">
-        <h4>Judge-Accuracy Notice</h4>
-        <p>
-          Frontend Prototype Demo. Uses browser <code>localStorage</code> for state persistence.
-          No live university server, real-time IoT occupancy, or automatic email transmission is claimed.
-        </p>
-      </div>
-    </div>
-
-    <div class="footer-bottom text-center">
-      <p>&copy; 2026 CampusSync Team. All rights reserved. Pure HTML5, CSS3, &amp; Vanilla JavaScript.</p>
-    </div>
-  </footer>
-
-  <!-- Scripts -->
   <script src="data/demo-data.js"></script>
   <script src="js/main.js"></script>
-  <script src="js/lost-found.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const typeInput = document.getElementById("dedicTypeInput");
+      const tabLost = document.getElementById("tabDedicLost");
+      const tabFound = document.getElementById("tabDedicFound");
+      const dropzone = document.getElementById("dedicFileDropzone");
+      const fileInput = document.getElementById("dedicFileInput");
+      const preview = document.getElementById("dedicPreview");
+      const prompt = document.getElementById("dedicPrompt");
+      const form = document.getElementById("dedicatedReportForm");
+      let base64 = "";
+
+      // Check URL query e.g. report.html?type=found
+      const urlType = new URLSearchParams(window.location.search).get("type");
+      if (urlType === "found") {
+        typeInput.value = "found";
+        tabFound.classList.add("active");
+        tabLost.classList.remove("active");
+      }
+
+      tabLost.addEventListener("click", () => {
+        typeInput.value = "lost";
+        tabLost.classList.add("active");
+        tabFound.classList.remove("active");
+      });
+
+      tabFound.addEventListener("click", () => {
+        typeInput.value = "found";
+        tabFound.classList.add("active");
+        tabLost.classList.remove("active");
+      });
+
+      dropzone.addEventListener("click", () => fileInput.click());
+      fileInput.addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          base64 = evt.target.result;
+          prompt.style.display = "none";
+          preview.src = base64;
+          preview.style.display = "block";
+        };
+        reader.readAsDataURL(file);
+      });
+
+      // Set today
+      document.getElementById("dedicDate").value = new Date().toISOString().split("T")[0];
+
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const type = typeInput.value;
+        const name = document.getElementById("dedicItemName").value.trim();
+        const category = document.getElementById("dedicCategory").value;
+        const colour = document.getElementById("dedicColour").value.trim();
+        const location = document.getElementById("dedicLocation").value.trim();
+        const date = document.getElementById("dedicDate").value;
+        const desc = document.getElementById("dedicDesc").value.trim();
+        const email = document.getElementById("dedicEmail").value.trim();
+
+        let img = base64;
+        if (!img) {
+          img = "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=800&q=80";
+        }
+
+        const newReport = {
+          id: "lf-" + Date.now(),
+          type,
+          itemName: name,
+          category,
+          colour,
+          location,
+          date,
+          time: "Just now",
+          description: desc,
+          contactEmail: email,
+          image: img,
+          status: "active",
+          relativeTime: "Just now"
+        };
+
+        const existing = getStoredReports();
+        existing.unshift(newReport);
+        saveStoredReports(existing);
+
+        showToast("Report submitted successfully! Redirecting...", "success");
+        setTimeout(() => {
+          window.location.href = "lost-found.html";
+        }, 1000);
+      });
+    });
+  </script>
 </body>
 </html>

@@ -1,860 +1,634 @@
 /**
  * ============================================================================
- * CampusConnect — Smart Lost & Found Module (js/lost-found.js)
+ * CampusSync — Smart Lost & Found Module (js/lost-found.js)
  * ============================================================================
- *
- * TEAM ROLE: Member 1 (JavaScript Lead)
- *
- * PURPOSE:
- * 1. Form Intake & Validation (used on report.html)
- * 2. Report Cards Display & DOM Rendering (used on lost-found.html)
- * 3. Search & Multi-Filter Logic (by text, type, and category)
- * 4. Rule-Based Smart Matching Engine (evaluates Lost vs Found items)
- *
- * ----------------------------------------------------------------------------
- * 🧠 RULE-BASED MATCHING ALGORITHM EXPLANATION (FOR JUDGES)
- * ----------------------------------------------------------------------------
- *
- * QUESTION: "Is this machine learning / AI?"
- * ANSWER:
- * "No, this prototype does not use machine learning or deep neural networks.
- * Instead, we engineered a deterministic, rule-based scoring algorithm.
- *
- * In a student hackathon, rule-based matching is faster (<1ms), completely
- * offline, 100% explainable, and cannot hallucinate.
- *
- * Each attribute contributes a specific number of points:
- *
- *   1. Category Match:        +3 points (Category is the strongest signal)
- *   2. Colour Match:          +2 points (e.g. 'Black' matches 'Black Leather')
- *   3. Location Match:        +2 points (e.g. 'Central Library' matches 'Library')
- *   4. Description Keywords:  +1 point  (Overlap in significant descriptive words)
- *   --------------------------------------------------------------------------
- *   MAXIMUM POSSIBLE SCORE:   8 points
- *
- * CONFIDENCE CLASSIFICATION:
- * - Score >= 6:  'High Similarity'
- * - Score 4 – 5: 'Possible Match'
- * - Score 2 – 3: 'Potential Match'
- * - Score < 2:   Not displayed (too weak)
- *
- * ETHICAL GUARDRAIL:
- * We deliberately NEVER output 'Confirmed Match'. An algorithm cannot prove
- * true ownership. We only guide students with 'Possible Match' or 'Similar Item',
- * advising manual verification."
+ * Implements Feature 2:
+ * 1. Rule-Based Smart Matching Engine (+3 Category, +2 Colour, +2 Location, +1 Keywords)
+ * 2. Multi-Filter & Real-Time Search
+ * 3. Item Cards Grid with Photos, Status Badges & Relative Timestamps
+ * 4. Item Details Modal with Contact / Claim flow
+ * 5. Integrated Report Modal (Lost & Found) with Base64 Image Upload
  * ============================================================================
  */
 
-// Common English stopwords to ignore when analyzing description keywords
-const STOP_WORDS = new Set([
-  "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for", "with",
-  "by", "from", "up", "about", "into", "over", "after", "is", "are", "was", "were",
-  "be", "been", "have", "has", "had", "it", "its", "this", "that", "these", "those",
-  "i", "you", "he", "she", "we", "they", "my", "your", "his", "her", "left", "found",
-  "lost", "near", "on", "of", "some", "item", "please", "contact"
-]);
+(function () {
+  "use strict";
 
-// ============================================================================
-// PART 1: SMART MATCHING ENGINE (services/matching logic in JS)
-// ============================================================================
-
-/**
- * Extracts normalized, stopword-filtered keywords from a text string.
- *
- * 1. Purpose: Break a sentence/description into meaningful word tokens.
- * 2. Input: String (e.g. "Black wallet with college ID card DK-2026")
- * 3. Logic: Converts to lowercase, strips punctuation, splits by whitespace,
- *    and filters out common English stopwords.
- * 4. Output: Set of keyword strings (e.g. Set {"wallet", "college", "id", "card", "dk-2026"})
- */
-function extractKeywords(text) {
-  if (!text) return new Set();
-
-  return new Set(
-    text
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, " ")
-      .split(/\s+/)
-      .filter((word) => word.length > 2 && !STOP_WORDS.has(word))
-  );
-}
-
-/**
- * Evaluates the similarity score between a Lost item and a Found item.
- *
- * 1. Purpose: Calculate a deterministic score from 0 to 8 points.
- * 2. Input: Two objects (lostItem, foundItem).
- * 3. Main Logic:
- *    - Check Category match (+3 pts)
- *    - Check Colour token overlap (+2 pts)
- *    - Check Location substring/token overlap (+2 pts)
- *    - Check Description keyword intersection (+1 pt)
- * 4. Output: An object with total score, confidence label, and breakdown list:
- *    { score: 8, maxScore: 8, confidence: "High Similarity", reasons: [...] }
- */
-function calculateMatchScore(lostItem, foundItem) {
-  let score = 0;
-  const reasons = [];
-
-  // Criterion 1: Category Match (+3 points)
-  if (
-    lostItem.category &&
-    foundItem.category &&
-    lostItem.category.toLowerCase() === foundItem.category.toLowerCase()
-  ) {
-    score += 3;
-    reasons.push({
-      label: `Same Category: ${lostItem.category}`,
-      points: "+3",
-      matched: true
-    });
-  } else {
-    reasons.push({
-      label: "Different Category",
-      points: "+0",
-      matched: false
-    });
-  }
-
-  // Criterion 2: Colour Match (+2 points)
-  const lostColour = (lostItem.colour || "").toLowerCase().trim();
-  const foundColour = (foundItem.colour || "").toLowerCase().trim();
-
-  const colourMatch =
-    lostColour &&
-    foundColour &&
-    (lostColour === foundColour ||
-      lostColour.includes(foundColour) ||
-      foundColour.includes(lostColour));
-
-  if (colourMatch) {
-    score += 2;
-    reasons.push({
-      label: `Matching Colour: ${lostItem.colour}`,
-      points: "+2",
-      matched: true
-    });
-  }
-
-  // Criterion 3: Location Match (+2 points)
-  const lostLoc = (lostItem.location || "").toLowerCase().trim();
-  const foundLoc = (foundItem.location || "").toLowerCase().trim();
-
-  // Extract tokens from location
-  const lostLocTokens = lostLoc.split(/\s+/).filter((t) => t.length > 2);
-  const foundLocTokens = foundLoc.split(/\s+/).filter((t) => t.length > 2);
-
-  const locationMatch =
-    lostLoc &&
-    foundLoc &&
-    (lostLoc.includes(foundLoc) ||
-      foundLoc.includes(lostLoc) ||
-      lostLocTokens.some((tok) => foundLoc.includes(tok)));
-
-  if (locationMatch) {
-    score += 2;
-    reasons.push({
-      label: `Proximity Location: ${lostItem.location}`,
-      points: "+2",
-      matched: true
-    });
-  }
-
-  // Criterion 4: Description Keyword Similarity (+1 point)
-  const lostKeywords = extractKeywords(`${lostItem.itemName} ${lostItem.description}`);
-  const foundKeywords = extractKeywords(`${foundItem.itemName} ${foundItem.description}`);
-
-  let sharedKeywords = [];
-  for (const word of lostKeywords) {
-    for (const fWord of foundKeywords) {
-      if (
-        word === fWord ||
-        (word.length > 3 && fWord.length > 3 && (word.startsWith(fWord) || fWord.startsWith(word)))
-      ) {
-        if (!sharedKeywords.includes(word)) {
-          sharedKeywords.push(word);
-        }
-      }
-    }
-  }
-
-  if (sharedKeywords.length > 0) {
-    score += 1;
-    reasons.push({
-      label: `Keywords: ${sharedKeywords.slice(0, 3).join(", ")}`,
-      points: "+1",
-      matched: true
-    });
-  }
-
-  // Determine Confidence Label (Ethical Rule: Never say "Confirmed Match")
-  let confidence = "Potential Match";
-  if (score >= 6) {
-    confidence = "High Similarity";
-  } else if (score >= 4) {
-    confidence = "Possible Match";
-  }
-
-  return {
-    score,
-    maxScore: 8,
-    confidence,
-    reasons,
-    isMatch: score >= 4 // Threshold to qualify as a displayed possible match
-  };
-}
-
-/**
- * Finds all potential matches across active Lost and Found reports.
- *
- * 1. Purpose: Generates the list of matched pairs for the Smart Match Radar.
- * 2. Input: Array of all reports.
- * 3. Logic:
- *    - Splits reports into lostList and foundList.
- *    - Iterates each lost item against every found item.
- *    - Computes calculateMatchScore().
- *    - Filters only scores >= 4 and sorts from highest score to lowest.
- * 4. Output: Array of match pair objects.
- */
-function findPotentialMatches(reports) {
-  const lostList = reports.filter((r) => r.type === "lost");
-  const foundList = reports.filter((r) => r.type === "found");
-  const matches = [];
-
-  for (const lost of lostList) {
-    for (const found of foundList) {
-      const result = calculateMatchScore(lost, found);
-      if (result.isMatch) {
-        matches.push({
-          lostItem: lost,
-          foundItem: found,
-          score: result.score,
-          maxScore: result.maxScore || 8,
-          confidence: result.confidence,
-          reasons: result.reasons
-        });
-      }
-    }
-  }
-
-  // Sort by highest score first
-  return matches.sort((a, b) => b.score - a.score);
-}
-
-// ============================================================================
-// PART 2: REPORT INTAKE FORM (report.html)
-// ============================================================================
-
-/**
- * Initializes the report submission form on report.html.
- */
-function initReportForm() {
-  const form = document.getElementById("reportForm");
-  if (!form) return;
-
-  const tabLost = document.getElementById("tabLost");
-  const tabFound = document.getElementById("tabFound");
-  const itemTypeInput = document.getElementById("itemType");
-  const submitBtn = document.getElementById("submitBtn");
-  const dateInput = document.getElementById("date");
-  const alertBox = document.getElementById("formAlert");
-  const alertTitle = document.getElementById("alertTitle");
-  const alertMessage = document.getElementById("alertMessage");
-  const alertIcon = document.getElementById("alertIcon");
-
-  // 1. Set today's date as default in the date picker
-  if (dateInput && !dateInput.value) {
-    const today = new Date().toISOString().split("T")[0];
-    dateInput.value = today;
-  }
-
-  // 2. Check URL parameters (e.g. report.html?type=found)
-  const urlParams = new URLSearchParams(window.location.search);
-  const typeParam = urlParams.get("type");
-  if (typeParam === "found") {
-    setReportType("found");
-  } else {
-    setReportType("lost");
-  }
-
-  // 3. Tab Toggle Event Listeners
-  if (tabLost && tabFound) {
-    tabLost.addEventListener("click", () => setReportType("lost"));
-    tabFound.addEventListener("click", () => setReportType("found"));
-  }
-
-  function setReportType(type) {
-    if (type === "found") {
-      itemTypeInput.value = "found";
-      tabFound.classList.add("active");
-      tabFound.setAttribute("aria-selected", "true");
-      tabLost.classList.remove("active");
-      tabLost.setAttribute("aria-selected", "false");
-      submitBtn.textContent = "Report Found Item";
-      submitBtn.className = "btn btn-found btn-large";
-    } else {
-      itemTypeInput.value = "lost";
-      tabLost.classList.add("active");
-      tabLost.setAttribute("aria-selected", "true");
-      tabFound.classList.remove("active");
-      tabFound.setAttribute("aria-selected", "false");
-      submitBtn.textContent = "Report Lost Item";
-      submitBtn.className = "btn btn-primary btn-large";
-    }
-  }
-
-  // 4. Form Reset Handler to clear errors
-  form.addEventListener("reset", () => {
-    if (alertBox) alertBox.style.display = "none";
-    const errorSpans = form.querySelectorAll(".form-hint[id$='Error']");
-    errorSpans.forEach((span) => { span.style.display = "none"; });
-  });
-
-  // 5. Form Submit Handler
-  form.addEventListener("submit", (event) => {
-    // 1. Prevent normal browser page reload
-    event.preventDefault();
-
-    // 2. Safely read values from inputs
-    const type = itemTypeInput ? itemTypeInput.value : "lost";
-    const itemNameEl = document.getElementById("itemName");
-    const categoryEl = document.getElementById("category");
-    const colourEl = document.getElementById("colour");
-    const locationEl = document.getElementById("location");
-    const dateEl = document.getElementById("date");
-    const descriptionEl = document.getElementById("description");
-    const contactEl = document.getElementById("contactEmail") || document.getElementById("contact");
-
-    const itemName = itemNameEl ? itemNameEl.value.trim() : "";
-    const category = categoryEl ? categoryEl.value : "";
-    const colour = colourEl ? colourEl.value.trim() : "";
-    const location = locationEl ? locationEl.value.trim() : "";
-    const date = dateEl ? dateEl.value : "";
-    const description = descriptionEl ? descriptionEl.value.trim() : "";
-    const contact = contactEl ? contactEl.value.trim() : "";
-
-    // 3. Field-level error validation helper
-    function setFieldError(spanId, isInvalid) {
-      const span = document.getElementById(spanId);
-      if (span) {
-        span.style.display = isInvalid ? "block" : "none";
-      }
-    }
-
-    let hasError = false;
-    if (!itemName) { setFieldError("itemNameError", true); hasError = true; } else { setFieldError("itemNameError", false); }
-    if (!category) { setFieldError("categoryError", true); hasError = true; } else { setFieldError("categoryError", false); }
-    if (!colour) { setFieldError("colourError", true); hasError = true; } else { setFieldError("colourError", false); }
-    if (!location) { setFieldError("locationError", true); hasError = true; } else { setFieldError("locationError", false); }
-    if (!date) { setFieldError("dateError", true); hasError = true; } else { setFieldError("dateError", false); }
-    if (!description) { setFieldError("descriptionError", true); hasError = true; } else { setFieldError("descriptionError", false); }
-    if (!contact) { setFieldError("contactError", true); hasError = true; } else { setFieldError("contactError", false); }
-
-    // 4. Check for validation errors
-    if (hasError) {
-      showAlert(
-        "error",
-        "Please fill in all required fields",
-        "All form fields marked with an asterisk (*) must be provided."
-      );
-      return;
-    }
-
-    // 5. Build new JavaScript Report Object
-    const newReport = {
-      id: Date.now(), // Generate unique numeric ID based on timestamp
-      type: type, // "lost" or "found"
-      itemName: itemName,
-      category: category,
-      colour: colour,
-      location: location,
-      date: date,
-      description: description,
-      contact: contact,
-      contactEmail: contact,
-      status: "active"
-    };
-
-    // 6. Save to localStorage using our data layer function
-    const existingReports = getStoredReports();
-    existingReports.unshift(newReport); // Add to beginning of array
-    const savedSuccess = saveStoredReports(existingReports);
-
-    if (savedSuccess) {
-      if (typeof addNotification === "function") {
-        addNotification(
-          `New ${type === "lost" ? "Lost" : "Found"} Report`,
-          `"${itemName}" was logged at ${location}.`,
-          "info"
-        );
-      }
-
-      if (typeof showToast === "function") {
-        showToast(`Report for "${itemName}" created successfully!`, "success");
-      }
-
-      showAlert(
-        "success",
-        `Report Saved Successfully!`,
-        `Your ${type.toUpperCase()} report for "${itemName}" has been added to the board. Redirecting to Lost & Found...`
-      );
-
-      // Disable submit button while redirecting
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.textContent = "Saved! Redirecting...";
-      }
-
-      // Reset form
-      form.reset();
-
-      // Redirect after 1.2 seconds so user can see their report
-      setTimeout(() => {
-        window.location.href = "lost-found.html";
-      }, 1200);
-    } else {
-      showAlert(
-        "error",
-        "Could Not Save Report",
-        "An unexpected error occurred while writing to browser localStorage."
-      );
-    }
-  });
-
-  function showAlert(type, title, message) {
-    if (!alertBox) return;
-    alertBox.style.display = "flex";
-    alertBox.className = type === "success" ? "alert-box alert-success" : "alert-box alert-error";
-    alertIcon.textContent = type === "success" ? "✅" : "⚠️";
-    alertTitle.textContent = title;
-    alertMessage.textContent = message;
-    alertBox.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }
-}
-
-// ============================================================================
-// PART 3: LISTING, SEARCH & FILTERING (lost-found.html)
-// ============================================================================
-
-/**
- * Initializes the Lost & Found listing page:
- * - Reads all reports
- * - Runs the match radar
- * - Handles search and type/category filters
- */
-function initLostFoundPage() {
-  const reportsGrid = document.getElementById("reportsGrid");
-  if (!reportsGrid) return;
-
-  const searchInput = document.getElementById("searchInput");
-  const clearSearchBtn = document.getElementById("clearSearchBtn");
-  const filterBtns = document.querySelectorAll(".filter-btn[data-type]");
-  const categoryFilter = document.getElementById("categoryFilter");
-  const colourFilter = document.getElementById("colourFilter");
-  const locationFilter = document.getElementById("locationFilter");
-  const reportsCount = document.getElementById("reportsCount");
-  const emptyState = document.getElementById("emptyState");
-  const resetFiltersBtn = document.getElementById("resetFiltersBtn");
-  const matchRadarSection = document.getElementById("matchRadarSection");
-  const matchesContainer = document.getElementById("matchesContainer");
-  const matchCountBadge = document.getElementById("matchCountBadge");
-  const filterStatusText = document.getElementById("filterStatusText");
+  // Common English stopwords for keyword matching
+  const STOP_WORDS = new Set([
+    "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for", "with",
+    "by", "from", "up", "about", "into", "over", "after", "is", "are", "was", "were",
+    "be", "been", "have", "has", "had", "it", "its", "this", "that", "these", "those",
+    "i", "you", "he", "she", "we", "they", "my", "your", "his", "her", "left", "found",
+    "lost", "near", "on", "of", "some", "item", "please", "contact"
+  ]);
 
   // State
   let currentTypeFilter = "all";
   let currentCategoryFilter = "all";
-  let currentColourFilter = "all";
   let currentLocationFilter = "all";
   let currentSearchQuery = "";
+  let uploadedImageBase64 = "";
 
-  // 1. Initial Render (populates radar & campus reports grid)
-  applyFiltersAndRender();
+  // DOM Elements
+  const lfSearchInput = document.getElementById("lfSearchInput");
+  const lfTypeFilterBtns = document.querySelectorAll("#lfTypeFilters .filter-segment-btn");
+  const lfCategorySelect = document.getElementById("lfCategorySelect");
+  const lfLocationSelect = document.getElementById("lfLocationSelect");
+  const lfResetFiltersBtn = document.getElementById("lfResetFiltersBtn");
+  const lfReportsGrid = document.getElementById("lfReportsGrid");
+  const lfEmptyState = document.getElementById("lfEmptyState");
+  const reportsCounter = document.getElementById("reportsCounter");
+  const filterResultsMeta = document.getElementById("filterResultsMeta");
+  const sidebarLfCount = document.getElementById("sidebarLfCount");
 
-  // 2. Search Input Listener
-  if (searchInput) {
-    searchInput.addEventListener("input", (e) => {
-      currentSearchQuery = e.target.value.toLowerCase().trim();
-      if (clearSearchBtn) {
-        clearSearchBtn.style.display = currentSearchQuery.length > 0 ? "block" : "none";
-      }
-      applyFiltersAndRender();
-    });
+  // Smart Radar
+  const radarMatchesContainer = document.getElementById("radarMatchesContainer");
+  const matchRadarCountBadge = document.getElementById("matchRadarCountBadge");
+
+  // Item Details Modal Elements
+  const itemDetailsModal = document.getElementById("itemDetailsModal");
+  const closeDetailModalBtn = document.getElementById("closeDetailModalBtn");
+  const detailCloseBtn = document.getElementById("detailCloseBtn");
+  const detailStatusBadge = document.getElementById("detailStatusBadge");
+  const detailCategoryBadge = document.getElementById("detailCategoryBadge");
+  const detailItemImg = document.getElementById("detailItemImg");
+  const detailItemTitle = document.getElementById("detailItemTitle");
+  const detailLocation = document.getElementById("detailLocation");
+  const detailDate = document.getElementById("detailDate");
+  const detailColour = document.getElementById("detailColour");
+  const detailDescription = document.getElementById("detailDescription");
+  const detailMatchBox = document.getElementById("detailMatchBox");
+  const detailMatchText = document.getElementById("detailMatchText");
+  const claimItemBtn = document.getElementById("claimItemBtn");
+  let currentlyViewedItem = null;
+
+  // Report Modal Elements
+  const openReportLostBtn = document.getElementById("openReportLostBtn");
+  const openReportFoundBtn = document.getElementById("openReportFoundBtn");
+  const reportItemModal = document.getElementById("reportItemModal");
+  const closeReportModalBtn = document.getElementById("closeReportModalBtn");
+  const cancelReportBtn = document.getElementById("cancelReportBtn");
+  const modalReportForm = document.getElementById("modalReportForm");
+  const reportModalTitle = document.getElementById("reportModalTitle");
+  const tabReportLost = document.getElementById("tabReportLost");
+  const tabReportFound = document.getElementById("tabReportFound");
+  const reportTypeInput = document.getElementById("reportTypeInput");
+  const submitReportModalBtn = document.getElementById("submitReportModalBtn");
+
+  // Image Upload Elements
+  const fileUploadDropzone = document.getElementById("fileUploadDropzone");
+  const reportImageInput = document.getElementById("reportImageInput");
+  const fileUploadPrompt = document.getElementById("fileUploadPrompt");
+  const fileUploadPreview = document.getElementById("fileUploadPreview");
+
+  // Form Inputs
+  const reportItemName = document.getElementById("reportItemName");
+  const reportCategory = document.getElementById("reportCategory");
+  const reportColour = document.getElementById("reportColour");
+  const reportLocation = document.getElementById("reportLocation");
+  const reportDate = document.getElementById("reportDate");
+  const reportDesc = document.getElementById("reportDesc");
+  const reportContactEmail = document.getElementById("reportContactEmail");
+
+  // ==========================================================================
+  // 1. SMART MATCHING ENGINE (Rule-Based AI Radar)
+  // ==========================================================================
+  function extractKeywords(text) {
+    if (!text) return new Set();
+    return new Set(
+      text
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, " ")
+        .split(/\s+/)
+        .filter((word) => word.length > 2 && !STOP_WORDS.has(word))
+    );
   }
 
-  // Clear search button
-  if (clearSearchBtn) {
-    clearSearchBtn.addEventListener("click", () => {
-      searchInput.value = "";
-      currentSearchQuery = "";
-      clearSearchBtn.style.display = "none";
-      applyFiltersAndRender();
-      searchInput.focus();
-    });
-  }
+  function calculateMatchScore(lostItem, foundItem) {
+    let score = 0;
+    const reasons = [];
 
-  // 3. Type Filter Buttons (All / Lost / Found)
-  filterBtns.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      filterBtns.forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
-      currentTypeFilter = btn.getAttribute("data-type");
-      applyFiltersAndRender();
-    });
-  });
-
-  // 4. Category Dropdown Filter
-  if (categoryFilter) {
-    categoryFilter.addEventListener("change", (e) => {
-      currentCategoryFilter = e.target.value;
-      applyFiltersAndRender();
-    });
-  }
-
-  // 5. Colour Dropdown Filter
-  if (colourFilter) {
-    colourFilter.addEventListener("change", (e) => {
-      currentColourFilter = e.target.value;
-      applyFiltersAndRender();
-    });
-  }
-
-  // 6. Location Dropdown Filter
-  if (locationFilter) {
-    locationFilter.addEventListener("change", (e) => {
-      currentLocationFilter = e.target.value;
-      applyFiltersAndRender();
-    });
-  }
-
-  // 7. Reset All Filters Button
-  if (resetFiltersBtn) {
-    resetFiltersBtn.addEventListener("click", () => {
-      currentTypeFilter = "all";
-      currentCategoryFilter = "all";
-      currentColourFilter = "all";
-      currentLocationFilter = "all";
-      currentSearchQuery = "";
-      if (searchInput) searchInput.value = "";
-      if (clearSearchBtn) clearSearchBtn.style.display = "none";
-      if (categoryFilter) categoryFilter.value = "all";
-      if (colourFilter) colourFilter.value = "all";
-      if (locationFilter) locationFilter.value = "all";
-      filterBtns.forEach((b) => {
-        b.classList.toggle("active", b.getAttribute("data-type") === "all");
-      });
-      applyFiltersAndRender();
-    });
-  }
-
-  /**
-   * Filters the reports list and Smart Radar according to active user controls.
-   */
-  function applyFiltersAndRender() {
-    const reports = getStoredReports();
-
-    // 1. Calculate all global match pairs
-    const allMatches = findPotentialMatches(reports);
-    const matchedLostIds = new Set(allMatches.map((m) => m.lostItem.id));
-    const matchedFoundIds = new Set(allMatches.map((m) => m.foundItem.id));
-
-    // 2. Check if specific attribute filters are active
-    const hasActiveFilters =
-      currentCategoryFilter !== "all" ||
-      currentColourFilter !== "all" ||
-      currentLocationFilter !== "all" ||
-      Boolean(currentSearchQuery);
-
-    // 3. Filter radar pairings to show those matching user criteria
-    let activeRadarMatches = allMatches;
-    if (hasActiveFilters) {
-      activeRadarMatches = allMatches.filter((match) => {
-        const pairItems = [match.lostItem, match.foundItem];
-
-        // Category filter
-        if (currentCategoryFilter !== "all") {
-          const catMatches = pairItems.some(
-            (it) => it.category && it.category.toLowerCase() === currentCategoryFilter.toLowerCase()
-          );
-          if (!catMatches) return false;
-        }
-
-        // Colour filter
-        if (currentColourFilter !== "all") {
-          const colMatches = pairItems.some((it) =>
-            (it.colour || "").toLowerCase().includes(currentColourFilter.toLowerCase())
-          );
-          if (!colMatches) return false;
-        }
-
-        // Location filter
-        if (currentLocationFilter !== "all") {
-          const locMatches = pairItems.some((it) =>
-            (it.location || "").toLowerCase().includes(currentLocationFilter.toLowerCase())
-          );
-          if (!locMatches) return false;
-        }
-
-        // Search text
-        if (currentSearchQuery) {
-          const textMatches = pairItems.some((it) => {
-            const combined = `${it.itemName} ${it.category} ${it.colour} ${it.location} ${it.description}`.toLowerCase();
-            return combined.includes(currentSearchQuery);
-          });
-          if (!textMatches) return false;
-        }
-
-        return true;
-      });
+    // Criterion 1: Category Match (+3)
+    if (
+      lostItem.category &&
+      foundItem.category &&
+      lostItem.category.toLowerCase() === foundItem.category.toLowerCase()
+    ) {
+      score += 3;
+      reasons.push(`Category: ${lostItem.category} (+3)`);
     }
 
-    // Render the Smart Match Radar reactively
-    renderMatchesRadar(activeRadarMatches, allMatches.length, hasActiveFilters);
+    // Criterion 2: Colour Match (+2)
+    const lostCol = (lostItem.colour || "").toLowerCase().trim();
+    const foundCol = (foundItem.colour || "").toLowerCase().trim();
+    if (lostCol && foundCol && (lostCol === foundCol || lostCol.includes(foundCol) || foundCol.includes(lostCol))) {
+      score += 2;
+      reasons.push(`Colour: ${lostItem.colour} (+2)`);
+    }
 
-    // 4. Filter individual campus reports for the grid
-    const filtered = reports.filter((item) => {
-      // Type match
-      if (currentTypeFilter !== "all" && item.type !== currentTypeFilter) {
-        return false;
-      }
+    // Criterion 3: Location Match (+2)
+    const lostLoc = (lostItem.location || "").toLowerCase();
+    const foundLoc = (foundItem.location || "").toLowerCase();
+    const locTokens = lostLoc.split(/\s+/).filter((t) => t.length > 2);
+    if (lostLoc && foundLoc && (lostLoc.includes(foundLoc) || foundLoc.includes(lostLoc) || locTokens.some((t) => foundLoc.includes(t)))) {
+      score += 2;
+      reasons.push(`Location proximity (+2)`);
+    }
 
-      // Category match
-      if (currentCategoryFilter !== "all" && item.category !== currentCategoryFilter) {
-        return false;
-      }
+    // Criterion 4: Keywords (+1)
+    const lostKw = extractKeywords(`${lostItem.itemName} ${lostItem.description}`);
+    const foundKw = extractKeywords(`${foundItem.itemName} ${foundItem.description}`);
+    const intersection = [...lostKw].filter((k) => foundKw.has(k));
+    if (intersection.length > 0) {
+      score += 1;
+      reasons.push(`Keywords: ${intersection.slice(0, 2).join(", ")} (+1)`);
+    }
 
-      // Colour match
-      if (currentColourFilter !== "all") {
-        const itemColour = (item.colour || "").toLowerCase();
-        const filterColour = currentColourFilter.toLowerCase();
-        if (!itemColour.includes(filterColour)) return false;
-      }
+    return {
+      score,
+      maxScore: 8,
+      isMatch: score >= 4,
+      confidence: score >= 6 ? "High Match" : "Possible Match",
+      reasons
+    };
+  }
 
-      // Location match
-      if (currentLocationFilter !== "all") {
-        const itemLoc = (item.location || "").toLowerCase();
-        const filterLoc = currentLocationFilter.toLowerCase();
-        if (!itemLoc.includes(filterLoc)) return false;
-      }
+  function findPotentialMatches(reports) {
+    const lostList = reports.filter((r) => r.type === "lost");
+    const foundList = reports.filter((r) => r.type === "found");
+    const matches = [];
 
-      // Search text match across multiple attributes
-      if (currentSearchQuery) {
-        const targetString = `${item.itemName} ${item.category} ${item.colour} ${item.location} ${item.description}`.toLowerCase();
-        if (!targetString.includes(currentSearchQuery)) {
-          return false;
+    lostList.forEach((lost) => {
+      foundList.forEach((found) => {
+        const evalResult = calculateMatchScore(lost, found);
+        if (evalResult.isMatch) {
+          matches.push({
+            lostItem: lost,
+            foundItem: found,
+            score: evalResult.score,
+            confidence: evalResult.confidence,
+            reasons: evalResult.reasons
+          });
         }
+      });
+    });
+
+    return matches.sort((a, b) => b.score - a.score);
+  }
+
+  // ==========================================================================
+  // 2. RENDERING CARDS & MATCH RADAR
+  // ==========================================================================
+  function applyFiltersAndRender() {
+    const allReports = getStoredReports();
+    const allMatches = findPotentialMatches(allReports);
+
+    // Render Smart Match Radar
+    renderRadar(allMatches);
+
+    // Filter Items
+    const filtered = allReports.filter((item) => {
+      // Type
+      if (currentTypeFilter !== "all" && item.type !== currentTypeFilter) return false;
+
+      // Category
+      if (currentCategoryFilter !== "all" && item.category !== currentCategoryFilter) return false;
+
+      // Location
+      if (currentLocationFilter !== "all") {
+        const loc = (item.location || "").toLowerCase();
+        if (!loc.includes(currentLocationFilter.toLowerCase())) return false;
+      }
+
+      // Query
+      if (currentSearchQuery) {
+        const fullString = `${item.itemName} ${item.category} ${item.colour} ${item.location} ${item.description}`.toLowerCase();
+        if (!fullString.includes(currentSearchQuery)) return false;
       }
 
       return true;
     });
 
-    // Update Counts & Meta text
-    if (reportsCount) {
-      reportsCount.textContent = filtered.length;
+    // Update Counter Badges
+    if (reportsCounter) reportsCounter.textContent = filtered.length;
+    if (sidebarLfCount) sidebarLfCount.textContent = allReports.length;
+
+    if (filterResultsMeta) {
+      let meta = `Showing ${filtered.length} of ${allReports.length} items`;
+      if (currentTypeFilter !== "all") meta += ` • ${currentTypeFilter.toUpperCase()}`;
+      if (currentCategoryFilter !== "all") meta += ` • ${currentCategoryFilter}`;
+      if (currentSearchQuery) meta += ` • "${currentSearchQuery}"`;
+      filterResultsMeta.textContent = meta;
     }
 
-    if (filterStatusText) {
-      let status = `Showing ${filtered.length} of ${reports.length} records`;
-      if (currentTypeFilter !== "all") status += ` • Type: ${currentTypeFilter.toUpperCase()}`;
-      if (currentCategoryFilter !== "all") status += ` • Category: ${currentCategoryFilter}`;
-      if (currentColourFilter !== "all") status += ` • Colour: ${currentColourFilter}`;
-      if (currentLocationFilter !== "all") status += ` • Location: ${currentLocationFilter}`;
-      if (currentSearchQuery) status += ` • Query: "${currentSearchQuery}"`;
-      filterStatusText.textContent = status;
-    }
-
-    // Toggle Empty State vs Grid
     if (filtered.length === 0) {
-      reportsGrid.innerHTML = "";
-      if (emptyState) emptyState.style.display = "block";
+      if (lfReportsGrid) lfReportsGrid.innerHTML = "";
+      if (lfEmptyState) lfEmptyState.style.display = "block";
     } else {
-      if (emptyState) emptyState.style.display = "none";
-      renderReportsCards(filtered, matchedLostIds, matchedFoundIds);
+      if (lfEmptyState) lfEmptyState.style.display = "none";
+      renderReportCards(filtered, allMatches);
     }
   }
 
-  /**
-   * Renders the individual report cards in the grid.
-   * Privacy Rule: Never display public emails. Uses a private contact trigger.
-   */
-  function renderReportsCards(items, matchedLostIds, matchedFoundIds) {
-    const allReports = getStoredReports();
+  function renderRadar(matches) {
+    if (!radarMatchesContainer || !matchRadarCountBadge) return;
 
-    reportsGrid.innerHTML = items
+    matchRadarCountBadge.textContent = `${matches.length} Possible ${matches.length === 1 ? "Pair" : "Pairs"}`;
+
+    if (matches.length === 0) {
+      radarMatchesContainer.innerHTML = `
+        <div style="grid-column: 1 / -1; padding: 1rem; text-align: center; color: var(--text-dim); font-size: 0.88rem;">
+          No matching item pairs currently meet the 4/8 confidence threshold.
+        </div>
+      `;
+      return;
+    }
+
+    radarMatchesContainer.innerHTML = matches
+      .slice(0, 4)
+      .map((m) => `
+        <div class="radar-match-pair">
+          <span class="match-score-badge">Match: ${m.score}/8 pts</span>
+
+          <div style="font-size: 0.8rem; color: #fcd34d; font-weight: 700;">
+            ⚡ ${m.confidence}
+          </div>
+
+          <div class="match-items-comparison">
+            <div class="match-item-subcard">
+              <span style="color: var(--accent-rose); font-weight: 700; font-size: 0.7rem; text-transform: uppercase;">Lost</span>
+              <strong>${escapeHTML(m.lostItem.itemName)}</strong>
+              <span>📍 ${escapeHTML(m.lostItem.location)}</span>
+            </div>
+            <span style="color: var(--text-dim); font-size: 1.1rem;">⇄</span>
+            <div class="match-item-subcard">
+              <span style="color: var(--accent-teal); font-weight: 700; font-size: 0.7rem; text-transform: uppercase;">Found</span>
+              <strong>${escapeHTML(m.foundItem.itemName)}</strong>
+              <span>📍 ${escapeHTML(m.foundItem.location)}</span>
+            </div>
+          </div>
+
+          <div class="match-reasons-tags">
+            ${m.reasons.map((r) => `<span class="match-reason-tag">✓ ${escapeHTML(r)}</span>`).join("")}
+          </div>
+
+          <button class="btn btn-secondary btn-sm view-matched-pair-btn" data-lost-id="${m.lostItem.id}" data-found-id="${m.foundItem.id}" style="margin-top: 0.25rem;">
+            Inspect Pair Details
+          </button>
+        </div>
+      `)
+      .join("");
+
+    radarMatchesContainer.querySelectorAll(".view-matched-pair-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const lostId = btn.getAttribute("data-lost-id");
+        const all = getStoredReports();
+        const foundItem = all.find((r) => r.id === lostId);
+        if (foundItem) openItemDetails(foundItem);
+      });
+    });
+  }
+
+  function renderReportCards(items, matches) {
+    if (!lfReportsGrid) return;
+
+    const matchedLostIds = new Set(matches.map((m) => m.lostItem.id));
+    const matchedFoundIds = new Set(matches.map((m) => m.foundItem.id));
+
+    lfReportsGrid.innerHTML = items
       .map((item) => {
         const isLost = item.type === "lost";
         const badgeClass = isLost ? "badge-lost" : "badge-found";
-        const badgeText = isLost ? "LOST ITEM" : "FOUND ITEM";
-        const cardBorderClass = isLost ? "card-lost" : "card-found";
-
-        // Check if this card has an active match in the opposite pool
-        const hasPossibleMatch =
-          (isLost && matchedLostIds.has(item.id)) ||
-          (!isLost && matchedFoundIds.has(item.id));
+        const badgeText = isLost ? "LOST" : "FOUND";
+        const isRecovered = item.status === "recovered";
+        const hasMatch = (isLost && matchedLostIds.has(item.id)) || (!isLost && matchedFoundIds.has(item.id));
+        const itemImg = item.image || "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=800&q=80";
 
         return `
-        <article class="report-card ${cardBorderClass}" id="report-${item.id}">
-          <div class="card-top-row">
-            <span class="badge ${badgeClass}">${badgeText}</span>
-            <span class="item-date">📅 ${formatDate(item.date)}</span>
+        <article class="lf-item-card" data-id="${item.id}">
+          <div class="lf-card-image-wrap">
+            <img src="${itemImg}" alt="${escapeHTML(item.itemName)}" class="lf-card-img" loading="lazy">
+            <div class="lf-card-badge">
+              <span class="badge ${badgeClass}">${badgeText}</span>
+              ${isRecovered ? `<span class="badge badge-primary" style="margin-left: 4px;">RECOVERED</span>` : ""}
+            </div>
+            <span class="lf-card-time">${escapeHTML(item.relativeTime || "Recently")}</span>
           </div>
 
-          <h3 class="card-item-title">${escapeHTML(item.itemName)}</h3>
+          <div class="lf-card-body">
+            <h3 class="lf-card-title">${escapeHTML(item.itemName)}</h3>
 
-          <div class="card-meta-pills">
-            <span class="meta-pill">📂 ${escapeHTML(item.category)}</span>
-            <span class="meta-pill">🎨 ${escapeHTML(item.colour)}</span>
-            <span class="meta-pill">📍 ${escapeHTML(item.location)}</span>
-          </div>
+            <div class="lf-meta-row">
+              <span>📍 ${escapeHTML(item.location)}</span>
+              <span>•</span>
+              <span>📂 ${escapeHTML(item.category)}</span>
+            </div>
 
-          <p class="card-desc">${escapeHTML(item.description)}</p>
+            <p class="lf-card-desc">${escapeHTML(item.description)}</p>
 
-          ${
-            hasPossibleMatch
-              ? `<div style="margin-bottom: 0.75rem;">
-                   <a href="#matchRadarSection" class="match-indicator" title="Click to view candidate pair in Smart Radar">
-                     ⚡ Possible Match Available (See Radar ↑)
-                   </a>
-                 </div>`
-              : ""
-          }
+            ${
+              hasMatch
+                ? `<div style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.35); padding: 0.3rem 0.6rem; border-radius: var(--radius-sm); font-size: 0.75rem; color: #fcd34d; display: flex; align-items: center; gap: 0.35rem;">
+                     <span>⚡</span> <strong>Possible Match Available in Radar</strong>
+                   </div>`
+                : ""
+            }
 
-          <div class="card-footer-row">
-            <button class="private-contact-badge" data-item-id="${item.id}" aria-label="Private student contact notice">
-              <span>🔒</span> Private Student Contact
-            </button>
-            <span class="item-status">Status: Active</span>
+            <div class="lf-card-footer">
+              <span style="font-size: 0.78rem; color: var(--text-dim);">🎨 ${escapeHTML(item.colour)}</span>
+              <button class="btn btn-secondary btn-sm view-details-btn" data-id="${item.id}">
+                View Details
+              </button>
+            </div>
           </div>
         </article>
       `;
       })
       .join("");
 
-    // Attach click listeners to private contact badges
-    const contactBadges = reportsGrid.querySelectorAll(".private-contact-badge");
-    contactBadges.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const itemId = btn.getAttribute("data-item-id");
-        const found = allReports.find((r) => String(r.id) === String(itemId));
-        if (found && typeof showPrivateContactNotice === "function") {
-          showPrivateContactNotice(found);
-        }
+    // Attach click listeners
+    lfReportsGrid.querySelectorAll(".view-details-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const id = btn.getAttribute("data-id");
+        const found = items.find((it) => it.id === id);
+        if (found) openItemDetails(found);
+      });
+    });
+
+    lfReportsGrid.querySelectorAll(".lf-item-card").forEach((card) => {
+      card.addEventListener("click", () => {
+        const id = card.getAttribute("data-id");
+        const found = items.find((it) => it.id === id);
+        if (found) openItemDetails(found);
       });
     });
   }
 
-  /**
-   * Renders the Smart Match Radar section showing paired candidates.
-   */
-  function renderMatchesRadar(matches, totalGlobalCount, isFiltered) {
-    if (!matchesContainer || !matchRadarSection) return;
+  // ==========================================================================
+  // 3. ITEM DETAILS MODAL & CLAIM FLOW
+  // ==========================================================================
+  function openItemDetails(item) {
+    currentlyViewedItem = item;
+    if (!itemDetailsModal) return;
 
-    if (matchCountBadge) {
-      if (isFiltered) {
-        matchCountBadge.textContent = `${matches.length} ${matches.length === 1 ? "Pair" : "Pairs"} (Filtered)`;
+    const isLost = item.type === "lost";
+    if (detailStatusBadge) {
+      detailStatusBadge.className = isLost ? "badge badge-lost" : "badge badge-found";
+      detailStatusBadge.textContent = isLost ? "LOST ITEM" : "FOUND ITEM";
+    }
+
+    if (detailCategoryBadge) detailCategoryBadge.textContent = item.category;
+    if (detailItemTitle) detailItemTitle.textContent = item.itemName;
+    if (detailLocation) detailLocation.textContent = item.location;
+    if (detailDate) detailDate.textContent = item.relativeTime || formatDate(item.date);
+    if (detailColour) detailColour.textContent = item.colour || "Not specified";
+    if (detailDescription) detailDescription.textContent = item.description;
+    if (detailItemImg) detailItemImg.src = item.image || "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=800&q=80";
+
+    // Check if item has a match in opposite pool
+    const allReports = getStoredReports();
+    const allMatches = findPotentialMatches(allReports);
+    const relatedMatch = allMatches.find(
+      (m) => (isLost && m.lostItem.id === item.id) || (!isLost && m.foundItem.id === item.id)
+    );
+
+    if (detailMatchBox && detailMatchText) {
+      if (relatedMatch) {
+        detailMatchBox.style.display = "block";
+        const opposite = isLost ? relatedMatch.foundItem : relatedMatch.lostItem;
+        detailMatchText.textContent = `Scored ${relatedMatch.score}/8 pts against "${opposite.itemName}" at ${opposite.location}. Check the Smart Radar on the board.`;
       } else {
-        matchCountBadge.textContent = `${matches.length} Potential ${matches.length === 1 ? "Pair" : "Pairs"}`;
+        detailMatchBox.style.display = "none";
       }
     }
 
-    if (matches.length === 0) {
-      matchesContainer.innerHTML = `
-        <div class="radar-empty-state" style="padding: 1.5rem; text-align: center; background: rgba(0,0,0,0.25); border-radius: var(--radius-md); border: 1px dashed rgba(251, 191, 36, 0.35); grid-column: 1 / -1;">
-          <p style="color: #fde68a; font-size: 0.95rem; margin-bottom: 0.4rem; font-weight: 600;">
-            ${isFiltered ? "No potential matches found for active filter settings." : "No potential matches currently detected."}
-          </p>
-          <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.75rem;">
-            ${isFiltered ? `There are ${totalGlobalCount} total campus pairings in the database. Reset filters to see all matches.` : "As students report items with matching category, colour, or location, candidate pairings appear here."}
-          </p>
-          ${
-            isFiltered
-              ? `<button class="btn btn-secondary btn-sm" id="radarResetFilterBtn" style="font-size: 0.8rem; padding: 0.35rem 0.85rem;">Clear Filters &amp; View All Radar Matches</button>`
-              : ""
-          }
-        </div>
-      `;
+    itemDetailsModal.classList.add("open");
+  }
 
-      const radarReset = document.getElementById("radarResetFilterBtn");
-      if (radarReset && resetFiltersBtn) {
-        radarReset.addEventListener("click", () => resetFiltersBtn.click());
-      }
-      return;
-    }
+  function closeItemDetails() {
+    if (itemDetailsModal) itemDetailsModal.classList.remove("open");
+    currentlyViewedItem = null;
+  }
 
-    matchesContainer.innerHTML = matches
-      .map((match) => {
-        const { lostItem, foundItem, score, maxScore, confidence, reasons } = match;
-
-        // Render matched reason tags
-        const reasonsHTML = reasons
-          .filter((r) => r.matched)
-          .map((r) => `<li class="reason-tag matched">${escapeHTML(r.label)} (${r.points})</li>`)
-          .join("");
-
-        return `
-        <div class="match-card">
-          <div class="match-card-top">
-            <span class="badge badge-amber">${escapeHTML(confidence)}</span>
-            <span class="match-score-pill">${score}/${maxScore || 8} Points</span>
-          </div>
-
-          <div class="match-pairing-label">
-            Potential Pairing Detected
-          </div>
-
-          <div class="match-versus">
-            <div class="match-side lost-side">
-              <div class="match-side-tag"><span class="badge badge-lost">LOST</span></div>
-              <div class="match-side-name" title="${escapeHTML(lostItem.itemName)}">${escapeHTML(lostItem.itemName)}</div>
-              <div class="match-side-meta">📍 ${escapeHTML(lostItem.location)}</div>
-              <button class="private-contact-badge-mini" data-contact-item="${lostItem.id}" title="Contact reporter privately">🔒 Contact Reporter</button>
-            </div>
-
-            <div class="match-divider-icon" aria-hidden="true">⇄</div>
-
-            <div class="match-side found-side">
-              <div class="match-side-tag"><span class="badge badge-found">FOUND</span></div>
-              <div class="match-side-name" title="${escapeHTML(foundItem.itemName)}">${escapeHTML(foundItem.itemName)}</div>
-              <div class="match-side-meta">📍 ${escapeHTML(foundItem.location)}</div>
-              <button class="private-contact-badge-mini" data-contact-item="${foundItem.id}" title="Contact finder privately">🔒 Contact Finder</button>
-            </div>
-          </div>
-
-          <div class="match-signals-container">
-            <span style="font-size: 0.8rem; font-weight: 600; color: #fde68a; display: block; margin-bottom: 0.35rem;">
-              Matching Signals Breakdown:
-            </span>
-            <ul class="match-reasons-list">
-              ${reasonsHTML}
-            </ul>
-          </div>
-        </div>
-      `;
-      })
-      .join("");
-
-    // Attach click listeners to radar private contact mini badges
-    const miniBadges = matchesContainer.querySelectorAll(".private-contact-badge-mini");
-    const allStored = getStoredReports();
-    miniBadges.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const itemId = btn.getAttribute("data-contact-item");
-        const found = allStored.find((r) => String(r.id) === String(itemId));
-        if (found && typeof showPrivateContactNotice === "function") {
-          showPrivateContactNotice(found);
-        }
-      });
+  if (closeDetailModalBtn) closeDetailModalBtn.addEventListener("click", closeItemDetails);
+  if (detailCloseBtn) detailCloseBtn.addEventListener("click", closeItemDetails);
+  if (itemDetailsModal) {
+    itemDetailsModal.addEventListener("click", (e) => {
+      if (e.target === itemDetailsModal) closeItemDetails();
     });
   }
-}
 
-// ============================================================================
-// PAGE INITIALIZATION ROUTER
-// ============================================================================
-document.addEventListener("DOMContentLoaded", () => {
-  // If we are on report.html
-  initReportForm();
+  if (claimItemBtn) {
+    claimItemBtn.addEventListener("click", () => {
+      if (!currentlyViewedItem) return;
+      closeItemDetails();
+      if (typeof showPrivateContactNotice === "function") {
+        showPrivateContactNotice(currentlyViewedItem);
+      } else {
+        showToast("Claim request logged! Student services will verify ownership.", "success");
+      }
+    });
+  }
 
-  // If we are on lost-found.html
-  initLostFoundPage();
-});
+  // ==========================================================================
+  // 4. REPORT MODAL (LOST & FOUND) & IMAGE UPLOAD
+  // ==========================================================================
+  function openReportModal(defaultType = "lost") {
+    if (!reportItemModal) return;
+    setReportType(defaultType);
 
+    // Set today's date
+    if (reportDate) {
+      const today = new Date().toISOString().split("T")[0];
+      reportDate.value = today;
+    }
+
+    reportItemModal.classList.add("open");
+  }
+
+  function closeReportModal() {
+    if (reportItemModal) reportItemModal.classList.remove("open");
+    if (modalReportForm) modalReportForm.reset();
+    resetImagePreview();
+  }
+
+  function setReportType(type) {
+    if (reportTypeInput) reportTypeInput.value = type;
+
+    if (type === "lost") {
+      tabReportLost.classList.add("active");
+      tabReportFound.classList.remove("active");
+      if (reportModalTitle) reportModalTitle.textContent = "Report a Lost Item";
+      if (submitReportModalBtn) submitReportModalBtn.textContent = "Submit Lost Item";
+    } else {
+      tabReportFound.classList.add("active");
+      tabReportLost.classList.remove("active");
+      if (reportModalTitle) reportModalTitle.textContent = "Report a Found Item";
+      if (submitReportModalBtn) submitReportModalBtn.textContent = "Submit Found Item";
+    }
+  }
+
+  if (openReportLostBtn) openReportLostBtn.addEventListener("click", () => openReportModal("lost"));
+  if (openReportFoundBtn) openReportFoundBtn.addEventListener("click", () => openReportModal("found"));
+  if (closeReportModalBtn) closeReportModalBtn.addEventListener("click", closeReportModal);
+  if (cancelReportBtn) cancelReportBtn.addEventListener("click", closeReportModal);
+  if (tabReportLost) tabReportLost.addEventListener("click", () => setReportType("lost"));
+  if (tabReportFound) tabReportFound.addEventListener("click", () => setReportType("found"));
+
+  if (reportItemModal) {
+    reportItemModal.addEventListener("click", (e) => {
+      if (e.target === reportItemModal) closeReportModal();
+    });
+  }
+
+  // Image upload via FileReader
+  if (fileUploadDropzone && reportImageInput) {
+    fileUploadDropzone.addEventListener("click", () => {
+      reportImageInput.click();
+    });
+
+    reportImageInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        uploadedImageBase64 = event.target.result;
+        if (fileUploadPrompt) fileUploadPrompt.style.display = "none";
+        if (fileUploadPreview) {
+          fileUploadPreview.src = uploadedImageBase64;
+          fileUploadPreview.style.display = "block";
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function resetImagePreview() {
+    uploadedImageBase64 = "";
+    if (reportImageInput) reportImageInput.value = "";
+    if (fileUploadPrompt) fileUploadPrompt.style.display = "block";
+    if (fileUploadPreview) {
+      fileUploadPreview.src = "";
+      fileUploadPreview.style.display = "none";
+    }
+  }
+
+  // Handle Form Submission
+  if (modalReportForm) {
+    modalReportForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+
+      const type = reportTypeInput ? reportTypeInput.value : "lost";
+      const itemName = reportItemName.value.trim();
+      const category = reportCategory.value;
+      const colour = reportColour.value.trim();
+      const location = reportLocation.value.trim();
+      const date = reportDate.value;
+      const description = reportDesc.value.trim();
+      const contactEmail = reportContactEmail.value.trim();
+
+      if (!itemName || !category || !colour || !location || !date || !description || !contactEmail) {
+        showToast("Please fill in all required fields.", "error");
+        return;
+      }
+
+      // Default sample fallback image if none uploaded
+      let itemImage = uploadedImageBase64;
+      if (!itemImage) {
+        if (category === "Electronics") itemImage = "https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?auto=format&fit=crop&w=800&q=80";
+        else if (category === "Bags") itemImage = "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=800&q=80";
+        else if (category === "Cards/IDs") itemImage = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80";
+        else itemImage = "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=800&q=80";
+      }
+
+      const newReport = {
+        id: "lf-" + Date.now(),
+        type: type,
+        itemName: itemName,
+        category: category,
+        colour: colour,
+        location: location,
+        date: date,
+        time: "Just now",
+        description: description,
+        contactEmail: contactEmail,
+        image: itemImage,
+        status: "active",
+        relativeTime: "Just now"
+      };
+
+      const existingReports = getStoredReports();
+      existingReports.unshift(newReport);
+      saveStoredReports(existingReports);
+
+      // Notification & Toast
+      const successMsg = type === "lost" ? "Lost item reported successfully." : "Found item reported successfully.";
+      showToast(successMsg, "success");
+      addNotification(`New ${type.toUpperCase()} Report`, `"${itemName}" was logged at ${location}.`, "match");
+
+      closeReportModal();
+      applyFiltersAndRender();
+    });
+  }
+
+  // ==========================================================================
+  // 5. EVENT LISTENERS FOR FILTERS
+  // ==========================================================================
+  function initFilterListeners() {
+    if (lfSearchInput) {
+      lfSearchInput.addEventListener("input", (e) => {
+        currentSearchQuery = e.target.value.toLowerCase().trim();
+        applyFiltersAndRender();
+      });
+    }
+
+    lfTypeFilterBtns.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        lfTypeFilterBtns.forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        currentTypeFilter = btn.getAttribute("data-type");
+        applyFiltersAndRender();
+      });
+    });
+
+    if (lfCategorySelect) {
+      lfCategorySelect.addEventListener("change", (e) => {
+        currentCategoryFilter = e.target.value;
+        applyFiltersAndRender();
+      });
+    }
+
+    if (lfLocationSelect) {
+      lfLocationSelect.addEventListener("change", (e) => {
+        currentLocationFilter = e.target.value;
+        applyFiltersAndRender();
+      });
+    }
+
+    if (lfResetFiltersBtn) {
+      lfResetFiltersBtn.addEventListener("click", () => {
+        currentTypeFilter = "all";
+        currentCategoryFilter = "all";
+        currentLocationFilter = "all";
+        currentSearchQuery = "";
+        if (lfSearchInput) lfSearchInput.value = "";
+        if (lfCategorySelect) lfCategorySelect.value = "all";
+        if (lfLocationSelect) lfLocationSelect.value = "all";
+        lfTypeFilterBtns.forEach((b) => b.classList.toggle("active", b.getAttribute("data-type") === "all"));
+        applyFiltersAndRender();
+      });
+    }
+  }
+
+  // ==========================================================================
+  // INITIALIZATION
+  // ==========================================================================
+  document.addEventListener("DOMContentLoaded", () => {
+    initFilterListeners();
+    applyFiltersAndRender();
+  });
+
+})();

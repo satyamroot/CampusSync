@@ -1,54 +1,39 @@
 /**
  * ============================================================================
- * CampusSync — Shared Core Utilities & Data Layer (js/main.js)
+ * CampusSync — Shared Core Utilities, Data Layer & Navigation (js/main.js)
  * ============================================================================
- *
- * PROJECT: CampusSync — Your Campus, In Sync.
- * TECH STACK: HTML5 + CSS3 + Vanilla JavaScript + Browser localStorage
- *
- * PURPOSE:
- * 1. Global Navigation & Mobile Menu handling
- * 2. Data Persistence Layer (localStorage for reports, spaces, events, bookmarks)
- * 3. Prototype Notification Center & Saved Items Modal
- * 4. Toast Alerts & Student Privacy Modals
- *
- * ----------------------------------------------------------------------------
- * HOW LOCALSTORAGE WORKS (CONCEPTUAL GUIDE FOR JUDGES):
- * ----------------------------------------------------------------------------
- * 1. localStorage stores key-value pairs purely as strings in the browser.
- * 2. JSON.stringify(object) turns a JavaScript array/object into text before saving.
- * 3. JSON.parse(text) turns stored text back into a real JavaScript array/object.
- * 4. All UI components call getStoredReports() or saveStoredReports() rather than
- *    calling localStorage directly, keeping storage decoupled and easy to upgrade!
+ * Handles:
+ * 1. Data Storage & Initialization (localStorage seed from demo-data.js)
+ * 2. Responsive Dashboard Sidebar & Mobile Navigation Drawer
+ * 3. Dynamic Student Greeting Utility
+ * 4. Notification Center Dropdown & Live Toasts
+ * 5. Unified Student Profile & Bookmarks Modal
+ * 6. Global Navigation Helpers (Deep-link to Where is your Block?)
  * ============================================================================
  */
 
-// Storage Keys used to identify CampusSync data inside browser localStorage
+// Storage Keys
 const STORAGE_KEYS = {
   REPORTS: "campussync_reports",
   SPACES: "campussync_spaces",
   EVENTS: "campussync_events",
   SAVED_EVENTS: "campussync_saved_events",
   SAVED_SPACES: "campussync_saved_spaces",
-  NOTIFICATIONS: "campussync_notifications"
+  NOTIFICATIONS: "campussync_notifications",
+  USER_RSVPS: "campussync_user_rsvps",
+  USER_PROFILE: "campussync_user_profile"
 };
 
 // ============================================================================
-// DATA STORAGE LAYER (Functions that interact with localStorage)
+// 1. DATA STORAGE LAYER
 // ============================================================================
 
 /**
- * Reads all Lost & Found reports from browser localStorage.
- *
- * 1. Purpose: Retrieve the active list of lost/found reports.
- * 2. Input: None.
- * 3. Main Logic: Checks campussync_reports (and legacy campusconnect key).
- *    If empty, initializes storage with DEMO_LOST_FOUND from demo-data.js.
- * 4. Output: Array of report objects.
+ * Reads all Lost & Found reports. Seeds with DEMO_LOST_FOUND if empty.
  */
 function getStoredReports() {
   try {
-    const rawData = localStorage.getItem(STORAGE_KEYS.REPORTS) || localStorage.getItem("campusconnect_reports");
+    const rawData = localStorage.getItem(STORAGE_KEYS.REPORTS);
     if (rawData) {
       const parsed = JSON.parse(rawData);
       if (Array.isArray(parsed) && parsed.length > 0) {
@@ -56,38 +41,28 @@ function getStoredReports() {
       }
     }
   } catch (error) {
-    console.error("Error reading reports from localStorage:", error);
+    console.error("Error reading reports:", error);
   }
 
-  // Fallback to demo seed data
-  if (typeof DEMO_LOST_FOUND !== "undefined") {
+  if (typeof DEMO_LOST_FOUND !== "undefined" && Array.isArray(DEMO_LOST_FOUND)) {
     saveStoredReports(DEMO_LOST_FOUND);
     return DEMO_LOST_FOUND;
   }
-
   return [];
 }
 
-/**
- * Saves an updated array of Lost & Found reports to browser localStorage.
- *
- * 1. Purpose: Persist newly submitted reports.
- * 2. Input: Array of report objects.
- * 3. Output: Boolean indicating success.
- */
 function saveStoredReports(reportsArray) {
   try {
-    const jsonString = JSON.stringify(reportsArray);
-    localStorage.setItem(STORAGE_KEYS.REPORTS, jsonString);
+    localStorage.setItem(STORAGE_KEYS.REPORTS, JSON.stringify(reportsArray));
     return true;
   } catch (error) {
-    console.error("Error saving reports to localStorage:", error);
+    console.error("Error saving reports:", error);
     return false;
   }
 }
 
 /**
- * Reads Campus Spaces directory from localStorage or demo seed data.
+ * Reads all Campus Spaces. Seeds with DEMO_SPACES if empty.
  */
 function getStoredSpaces() {
   try {
@@ -99,21 +74,29 @@ function getStoredSpaces() {
       }
     }
   } catch (error) {
-    console.error("Error reading spaces from localStorage:", error);
+    console.error("Error reading spaces:", error);
   }
 
-  if (typeof DEMO_SPACES !== "undefined") {
+  if (typeof DEMO_SPACES !== "undefined" && Array.isArray(DEMO_SPACES)) {
     try {
       localStorage.setItem(STORAGE_KEYS.SPACES, JSON.stringify(DEMO_SPACES));
     } catch (e) {}
     return DEMO_SPACES;
   }
-
   return [];
 }
 
+function saveStoredSpaces(spacesArray) {
+  try {
+    localStorage.setItem(STORAGE_KEYS.SPACES, JSON.stringify(spacesArray));
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 /**
- * Reads Campus Events from localStorage or demo seed data.
+ * Reads Campus Events. Seeds with DEMO_EVENTS if empty.
  */
 function getStoredEvents() {
   try {
@@ -125,50 +108,59 @@ function getStoredEvents() {
       }
     }
   } catch (error) {
-    console.error("Error reading events from localStorage:", error);
+    console.error("Error reading events:", error);
   }
 
-  if (typeof DEMO_EVENTS !== "undefined") {
+  if (typeof DEMO_EVENTS !== "undefined" && Array.isArray(DEMO_EVENTS)) {
     saveStoredEvents(DEMO_EVENTS);
     return DEMO_EVENTS;
   }
-
   return [];
 }
 
-/**
- * Saves updated events list to localStorage.
- */
 function saveStoredEvents(eventsArray) {
   try {
     localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(eventsArray));
     return true;
   } catch (error) {
-    console.error("Error saving events to localStorage:", error);
+    console.error("Error saving events:", error);
     return false;
   }
 }
 
-// ============================================================================
-// SAVED / BOOKMARKED ITEMS LAYER (Events & Spaces)
-// ============================================================================
-
 /**
- * Reads the list of saved event IDs from localStorage.
+ * User RSVPs
  */
-function getSavedEvents() {
+function getUserRsvps() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.SAVED_EVENTS);
-    return raw ? JSON.parse(raw) : [];
+    const raw = localStorage.getItem(STORAGE_KEYS.USER_RSVPS);
+    return raw ? JSON.parse(raw) : ["ev-1"]; // default RSVP to live talk
   } catch (e) {
-    return [];
+    return ["ev-1"];
+  }
+}
+
+function saveUserRsvps(rsvpsArray) {
+  try {
+    localStorage.setItem(STORAGE_KEYS.USER_RSVPS, JSON.stringify(rsvpsArray));
+    return true;
+  } catch (e) {
+    return false;
   }
 }
 
 /**
- * Toggles an event's saved state.
- * Returns true if now saved, false if removed.
+ * Saved / Bookmarked Items
  */
+function getSavedEvents() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.SAVED_EVENTS);
+    return raw ? JSON.parse(raw) : ["ev-4"]; // default HackFest bookmarked
+  } catch (e) {
+    return ["ev-4"];
+  }
+}
+
 function toggleSavedEvent(eventId) {
   let saved = getSavedEvents();
   const index = saved.indexOf(eventId);
@@ -177,35 +169,31 @@ function toggleSavedEvent(eventId) {
   if (index > -1) {
     saved.splice(index, 1);
     isSaved = false;
+    showToast("Event removed from bookmarks", "info");
   } else {
     saved.push(eventId);
     isSaved = true;
-    addNotification("Event Saved", "Saved event to your bookmarked campus activities.", "bookmark");
+    showToast("Event saved to bookmarks! 🔖", "success");
+    addNotification("Event Bookmarked", "Saved event to your campus activities calendar.", "bookmark");
   }
 
   try {
     localStorage.setItem(STORAGE_KEYS.SAVED_EVENTS, JSON.stringify(saved));
   } catch (e) {}
 
-  updateSavedBadgeCount();
+  updateBadges();
   return isSaved;
 }
 
-/**
- * Reads saved space IDs from localStorage.
- */
 function getSavedSpaces() {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.SAVED_SPACES);
-    return raw ? JSON.parse(raw) : [];
+    return raw ? JSON.parse(raw) : ["space-library-silent"];
   } catch (e) {
-    return [];
+    return ["space-library-silent"];
   }
 }
 
-/**
- * Toggles a space's saved state.
- */
 function toggleSavedSpace(spaceId) {
   let saved = getSavedSpaces();
   const index = saved.indexOf(spaceId);
@@ -214,68 +202,86 @@ function toggleSavedSpace(spaceId) {
   if (index > -1) {
     saved.splice(index, 1);
     isSaved = false;
+    showToast("Space removed from saved", "info");
   } else {
     saved.push(spaceId);
     isSaved = true;
-    addNotification("Space Saved", "Saved study space to your bookmarked campus spots.", "bookmark");
+    showToast("Space saved to bookmarks! 🔖", "success");
+    addNotification("Space Saved", "Added study space to your bookmarked spots.", "bookmark");
   }
 
   try {
     localStorage.setItem(STORAGE_KEYS.SAVED_SPACES, JSON.stringify(saved));
   } catch (e) {}
 
-  updateSavedBadgeCount();
+  updateBadges();
   return isSaved;
 }
 
 // ============================================================================
-// PROTOTYPE NOTIFICATION CENTER LAYER
+// 2. DYNAMIC GREETING UTILITY
 // ============================================================================
+function getStudentGreeting() {
+  const hour = new Date().getHours();
+  if (hour >= 4 && hour < 12) return "Good Morning, Student! 👋";
+  if (hour >= 12 && hour < 17) return "Good Afternoon, Student! 👋";
+  if (hour >= 17 && hour < 22) return "Good Evening, Student! 👋";
+  return "Working Late, Student? 🌙";
+}
 
-/**
- * Reads prototype notifications from localStorage.
- */
+function initDynamicGreeting() {
+  const greetingEl = document.getElementById("studentGreeting");
+  if (greetingEl) {
+    greetingEl.textContent = getStudentGreeting();
+  }
+}
+
+// ============================================================================
+// 3. NOTIFICATIONS SYSTEM
+// ============================================================================
 function getNotifications() {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
     if (raw) return JSON.parse(raw);
   } catch (e) {}
 
-  // Default seed notifications for demonstration
   const defaults = [
     {
       id: "notif-1",
       title: "Possible Match Detected",
       message: "Casio Scientific Calculator has an 8/8 rule match with a recent Found report.",
       type: "match",
-      time: "10 mins ago"
+      time: "4 mins ago"
     },
     {
       id: "notif-2",
-      title: "Event Bookmarked",
-      message: "Campus HackFest 2026 is saved to your activities calendar.",
-      type: "event",
-      time: "1 hour ago"
+      title: "Block S Room 204 Empty",
+      message: "Classroom 204 is now completely vacant and open for study until 8:00 PM.",
+      type: "space",
+      time: "15 mins ago"
     },
     {
       id: "notif-3",
-      title: "Welcome to CampusSync",
-      message: "Your campus discovery hub is active. Try reporting an item or exploring spaces.",
-      type: "info",
-      time: "Today"
+      title: "Tech Talk Live Now",
+      message: "Future of Agentic AI has started in Seminar Hall 102.",
+      type: "event",
+      time: "25 mins ago"
+    },
+    {
+      id: "notif-4",
+      title: "Event RSVP Confirmed",
+      message: "Your seat for Campus HackFest 2026 is confirmed.",
+      type: "success",
+      time: "1 hour ago"
     }
   ];
 
   try {
     localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(defaults));
   } catch (e) {}
-
   return defaults;
 }
 
-/**
- * Adds a new notification to the prototype notification center.
- */
 function addNotification(title, message, type = "info") {
   const notifs = getNotifications();
   const newNotif = {
@@ -287,66 +293,38 @@ function addNotification(title, message, type = "info") {
   };
 
   notifs.unshift(newNotif);
-  if (notifs.length > 10) notifs.pop(); // Keep maximum 10
+  if (notifs.length > 15) notifs.pop();
 
   try {
     localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notifs));
   } catch (e) {}
 
-  updateNotificationBadge();
+  updateBadges();
 }
 
-/**
- * Updates the notification bell badge count in the navbar.
- */
-function updateNotificationBadge() {
-  const badge = document.getElementById("notifBadge");
-  if (!badge) return;
-  const notifs = getNotifications();
-  badge.textContent = notifs.length;
-  badge.style.display = notifs.length > 0 ? "inline-flex" : "none";
-}
-
-/**
- * Updates the Saved Items badge count in the navbar.
- */
-function updateSavedBadgeCount() {
-  const badge = document.getElementById("savedCountBadge");
-  if (!badge) return;
-  const count = getSavedEvents().length + getSavedSpaces().length;
-  badge.textContent = count;
-  badge.style.display = count > 0 ? "inline-flex" : "none";
-}
-
-// ============================================================================
-// GLOBAL UI COMPONENTS: MODALS, NOTIFICATION DRAWER & TOASTS
-// ============================================================================
-
-/**
- * Initializes the notification dropdown toggle.
- */
 function initNotificationCenter() {
-  const notifBtn = document.getElementById("notifBtn");
+  const notifBtns = document.querySelectorAll(".notif-toggle-btn");
   const notifDropdown = document.getElementById("notifDropdown");
   const notifList = document.getElementById("notifList");
   const clearNotifsBtn = document.getElementById("clearNotifsBtn");
 
-  if (!notifBtn || !notifDropdown) return;
+  if (!notifDropdown) return;
 
-  notifBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const isOpen = notifDropdown.classList.contains("open");
-    if (!isOpen) {
-      renderNotificationsList();
-      notifDropdown.classList.add("open");
-    } else {
-      notifDropdown.classList.remove("open");
-    }
+  notifBtns.forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isOpen = notifDropdown.classList.contains("open");
+      if (!isOpen) {
+        renderNotificationsList();
+        notifDropdown.classList.add("open");
+      } else {
+        notifDropdown.classList.remove("open");
+      }
+    });
   });
 
-  // Close when clicking outside
   document.addEventListener("click", (e) => {
-    if (!notifDropdown.contains(e.target) && !notifBtn.contains(e.target)) {
+    if (!notifDropdown.contains(e.target)) {
       notifDropdown.classList.remove("open");
     }
   });
@@ -355,7 +333,7 @@ function initNotificationCenter() {
     clearNotifsBtn.addEventListener("click", () => {
       localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify([]));
       renderNotificationsList();
-      updateNotificationBadge();
+      updateBadges();
     });
   }
 
@@ -365,9 +343,9 @@ function initNotificationCenter() {
 
     if (notifs.length === 0) {
       notifList.innerHTML = `
-        <div class="notif-empty">
-          <p>No new notifications</p>
-          <small>Prototype alerts will appear here as you interact.</small>
+        <div style="padding: 2rem 1.5rem; text-align: center; color: var(--text-dim);">
+          <p style="font-size: 0.95rem; margin-bottom: 0.25rem;">No new notifications</p>
+          <small>Campus updates and match alerts will appear here.</small>
         </div>
       `;
       return;
@@ -377,16 +355,17 @@ function initNotificationCenter() {
       .map((n) => {
         let icon = "🔔";
         if (n.type === "match") icon = "⚡";
-        else if (n.type === "bookmark" || n.type === "event") icon = "📌";
+        else if (n.type === "space") icon = "🟢";
+        else if (n.type === "event" || n.type === "bookmark") icon = "📅";
         else if (n.type === "success") icon = "✅";
 
         return `
         <div class="notif-item">
-          <span class="notif-item-icon">${icon}</span>
-          <div class="notif-item-body">
+          <span style="font-size: 1.1rem; line-height: 1;">${icon}</span>
+          <div style="flex: 1;">
             <strong>${escapeHTML(n.title)}</strong>
             <p>${escapeHTML(n.message)}</p>
-            <span class="notif-item-time">${escapeHTML(n.time)}</span>
+            <span class="notif-time">${escapeHTML(n.time)}</span>
           </div>
         </div>
       `;
@@ -395,179 +374,9 @@ function initNotificationCenter() {
   }
 }
 
-/**
- * Initializes the Saved Items Modal.
- */
-function initSavedItemsModal() {
-  const savedBtn = document.getElementById("savedItemsBtn");
-  const modal = document.getElementById("savedItemsModal");
-  const closeBtn = document.getElementById("closeSavedModal");
-  const tabEvents = document.getElementById("savedTabEvents");
-  const tabSpaces = document.getElementById("savedTabSpaces");
-  const listContainer = document.getElementById("savedItemsList");
-
-  if (!savedBtn || !modal) return;
-
-  let activeTab = "events";
-
-  savedBtn.addEventListener("click", () => {
-    renderSavedList();
-    modal.classList.add("open");
-  });
-
-  if (closeBtn) {
-    closeBtn.addEventListener("click", () => {
-      modal.classList.remove("open");
-    });
-  }
-
-  modal.addEventListener("click", (e) => {
-    if (e.target === modal) {
-      modal.classList.remove("open");
-    }
-  });
-
-  if (tabEvents && tabSpaces) {
-    tabEvents.addEventListener("click", () => {
-      activeTab = "events";
-      tabEvents.classList.add("active");
-      tabSpaces.classList.remove("active");
-      renderSavedList();
-    });
-
-    tabSpaces.addEventListener("click", () => {
-      activeTab = "spaces";
-      tabSpaces.classList.add("active");
-      tabEvents.classList.remove("active");
-      renderSavedList();
-    });
-  }
-
-  function renderSavedList() {
-    if (!listContainer) return;
-
-    if (activeTab === "events") {
-      const savedIds = new Set(getSavedEvents());
-      const allEvents = getStoredEvents();
-      const savedEvents = allEvents.filter((e) => savedIds.has(e.id));
-
-      if (savedEvents.length === 0) {
-        listContainer.innerHTML = `
-          <div class="empty-state-mini">
-            <p>No saved events yet.</p>
-            <small>Click "Save Event" on any event card to bookmark it.</small>
-          </div>
-        `;
-        return;
-      }
-
-      listContainer.innerHTML = savedEvents
-        .map(
-          (ev) => `
-        <div class="saved-item-row">
-          <div>
-            <span class="badge badge-primary">${escapeHTML(ev.category)}</span>
-            <h4 style="margin: 0.3rem 0; color: #fff;">${escapeHTML(ev.name)}</h4>
-            <small style="color: var(--text-muted);">📅 ${formatDate(ev.date)} • 📍 ${escapeHTML(ev.location)}</small>
-          </div>
-          <button class="btn btn-outline btn-sm" onclick="handleUnsaveEvent('${ev.id}')">Remove</button>
-        </div>
-      `
-        )
-        .join("");
-    } else {
-      const savedIds = new Set(getSavedSpaces());
-      const allSpaces = getStoredSpaces();
-      const savedSpaces = allSpaces.filter((s) => savedIds.has(s.id));
-
-      if (savedSpaces.length === 0) {
-        listContainer.innerHTML = `
-          <div class="empty-state-mini">
-            <p>No saved spaces yet.</p>
-            <small>Bookmark study cubicles and labs from the Spaces page.</small>
-          </div>
-        `;
-        return;
-      }
-
-      listContainer.innerHTML = savedSpaces
-        .map(
-          (sp) => `
-        <div class="saved-item-row">
-          <div>
-            <span class="badge badge-primary">${escapeHTML(sp.category)}</span>
-            <h4 style="margin: 0.3rem 0; color: #fff;">${escapeHTML(sp.name)}</h4>
-            <small style="color: var(--text-muted);">📍 ${escapeHTML(sp.location)}</small>
-          </div>
-          <button class="btn btn-outline btn-sm" onclick="handleUnsaveSpace('${sp.id}')">Remove</button>
-        </div>
-      `
-        )
-        .join("");
-    }
-  }
-
-  // Global unsave hooks
-  window.handleUnsaveEvent = (id) => {
-    toggleSavedEvent(id);
-    renderSavedList();
-    if (typeof applyEventsFilters === "function") applyEventsFilters();
-  };
-
-  window.handleUnsaveSpace = (id) => {
-    toggleSavedSpace(id);
-    renderSavedList();
-    if (typeof applySpacesFilters === "function") applySpacesFilters();
-  };
-}
-
-/**
- * Displays a friendly Privacy Modal when a user clicks on private contact info.
- */
-function showPrivateContactNotice(item) {
-  let modal = document.getElementById("privacyModal");
-  if (!modal) {
-    modal = document.createElement("div");
-    modal.id = "privacyModal";
-    modal.className = "custom-modal";
-    document.body.appendChild(modal);
-  }
-
-  modal.innerHTML = `
-    <div class="modal-dialog">
-      <div class="modal-header">
-        <h3 style="color: #fff; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
-          <span>🔒</span> Private Student Contact Information
-        </h3>
-        <button class="modal-close" onclick="closePrivacyModal()">&times;</button>
-      </div>
-      <div class="modal-body">
-        <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.6;">
-          To protect student privacy, registered email addresses are <strong>never displayed publicly</strong> on item cards.
-        </p>
-        <div class="notice-box-private">
-          <strong>Item:</strong> ${escapeHTML(item.itemName)}<br>
-          <strong>Reporter Status:</strong> Registered Student (Verified in session)<br>
-          <strong>Reported On:</strong> ${formatDate(item.date)} at ${escapeHTML(item.location)}
-        </div>
-        <p style="color: var(--text-muted); font-size: 0.88rem; margin-top: 1rem;">
-          <em>Prototype Note:</em> When this item scores 4+ on our multi-criteria matching engine,
-          both students are alerted. In the future full-stack iteration, a secure backend email service will mediate communication.
-        </p>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-primary" onclick="closePrivacyModal()">Understood</button>
-      </div>
-    </div>
-  `;
-
-  modal.classList.add("open");
-  window.closePrivacyModal = () => modal.classList.remove("open");
-}
-
-/**
- * Displays a non-blocking toast message at the bottom-right.
- */
+// ============================================================================
+// 4. TOAST ALERTS
+// ============================================================================
 function showToast(message, type = "info") {
   let container = document.getElementById("toastContainer");
   if (!container) {
@@ -579,15 +388,18 @@ function showToast(message, type = "info") {
 
   const toast = document.createElement("div");
   toast.className = `toast-message toast-${type}`;
+  let icon = "ℹ️";
+  if (type === "success") icon = "✅";
+  if (type === "warn") icon = "⚡";
+  if (type === "error") icon = "⚠️";
+
   toast.innerHTML = `
-    <span class="toast-icon">${type === "success" ? "✅" : type === "warn" ? "⚡" : "ℹ️"}</span>
-    <span class="toast-text">${escapeHTML(message)}</span>
+    <span style="font-size: 1.1rem;">${icon}</span>
+    <span>${escapeHTML(message)}</span>
   `;
 
   container.appendChild(toast);
-  setTimeout(() => {
-    toast.classList.add("show");
-  }, 10);
+  setTimeout(() => toast.classList.add("show"), 10);
 
   setTimeout(() => {
     toast.classList.remove("show");
@@ -596,37 +408,221 @@ function showToast(message, type = "info") {
 }
 
 // ============================================================================
-// MOBILE NAVIGATION & HELPERS
+// 5. BADGES & COUNTERS
 // ============================================================================
+function updateBadges() {
+  const notifBadges = document.querySelectorAll(".notif-badge-pill");
+  const notifs = getNotifications();
+  notifBadges.forEach((b) => {
+    b.textContent = notifs.length;
+    b.style.display = notifs.length > 0 ? "inline-flex" : "none";
+  });
 
-function initMobileNavigation() {
-  const navToggle = document.getElementById("navToggle");
-  const siteNav = document.getElementById("siteNav");
+  const savedCount = getSavedEvents().length + getSavedSpaces().length;
+  const savedBadges = document.querySelectorAll(".saved-badge-pill");
+  savedBadges.forEach((b) => {
+    b.textContent = savedCount;
+    b.style.display = savedCount > 0 ? "inline-flex" : "none";
+  });
+}
 
-  if (navToggle && siteNav) {
-    navToggle.addEventListener("click", () => {
-      siteNav.classList.toggle("open");
+// ============================================================================
+// 6. STUDENT PROFILE & BOOKMARKS MODAL
+// ============================================================================
+function initProfileModal() {
+  const profileBtns = document.querySelectorAll(".profile-trigger-btn");
+  let modal = document.getElementById("profileModal");
+
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "profileModal";
+    modal.className = "custom-modal";
+    document.body.appendChild(modal);
+  }
+
+  profileBtns.forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      renderProfileContent();
+      modal.classList.add("open");
     });
+  });
 
-    document.addEventListener("click", (event) => {
-      if (!navToggle.contains(event.target) && !siteNav.contains(event.target)) {
-        siteNav.classList.remove("open");
+  function renderProfileContent() {
+    const savedEvents = getSavedEvents();
+    const savedSpaces = getSavedSpaces();
+    const userRsvps = getUserRsvps();
+    const allEvents = getStoredEvents();
+    const allSpaces = getStoredSpaces();
+
+    const bookmarkedEventsList = allEvents.filter((ev) => savedEvents.includes(ev.id));
+    const bookmarkedSpacesList = allSpaces.filter((sp) => savedSpaces.includes(sp.id));
+    const rsvpEventsList = allEvents.filter((ev) => userRsvps.includes(ev.id));
+
+    modal.innerHTML = `
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div class="user-avatar" style="width: 44px; height: 44px; font-size: 1.1rem;">SG</div>
+            <div>
+              <h3 class="modal-title" style="margin: 0;">Shivom Gupta</h3>
+              <span style="font-size: 0.8rem; color: var(--accent-primary);">B.Tech Computer Science &amp; Engg • 1st Year</span>
+            </div>
+          </div>
+          <button class="modal-close" onclick="closeProfileModal()">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Active RSVPs -->
+          <div>
+            <h4 style="color: #fff; font-size: 1rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem;">
+              <span>🎟️</span> Confirmed Event RSVPs (${rsvpEventsList.length})
+            </h4>
+            ${
+              rsvpEventsList.length === 0
+                ? `<p style="font-size: 0.85rem; color: var(--text-dim);">No event RSVPs yet.</p>`
+                : `<div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    ${rsvpEventsList
+                      .map(
+                        (ev) => `
+                      <div style="background: rgba(255, 255, 255, 0.04); padding: 0.75rem; border-radius: var(--radius-sm); display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                          <strong style="color: #fff; font-size: 0.9rem;">${escapeHTML(ev.name)}</strong>
+                          <div style="font-size: 0.78rem; color: var(--text-muted);">📅 ${ev.date} • 📍 ${ev.location}</div>
+                        </div>
+                        <a href="events.html" class="btn btn-outline btn-sm">View</a>
+                      </div>
+                    `
+                      )
+                      .join("")}
+                   </div>`
+            }
+          </div>
+
+          <!-- Bookmarked Spaces -->
+          <div>
+            <h4 style="color: #fff; font-size: 1rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem;">
+              <span>🔖</span> Saved Study Spots (${bookmarkedSpacesList.length})
+            </h4>
+            ${
+              bookmarkedSpacesList.length === 0
+                ? `<p style="font-size: 0.85rem; color: var(--text-dim);">No saved study spaces.</p>`
+                : `<div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    ${bookmarkedSpacesList
+                      .map(
+                        (sp) => `
+                      <div style="background: rgba(255, 255, 255, 0.04); padding: 0.75rem; border-radius: var(--radius-sm); display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                          <strong style="color: #fff; font-size: 0.9rem;">${escapeHTML(sp.name)}</strong>
+                          <div style="font-size: 0.78rem; color: var(--accent-teal);">📍 ${sp.location} • ${sp.availabilityBadge || "Available"}</div>
+                        </div>
+                        <a href="navigation.html?dest=${encodeURIComponent(sp.building || sp.name)}" class="btn btn-nav-action btn-sm">Navigate 🚶</a>
+                      </div>
+                    `
+                      )
+                      .join("")}
+                   </div>`
+            }
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-primary" onclick="closeProfileModal()">Done</button>
+        </div>
+      </div>
+    `;
+  }
+
+  window.closeProfileModal = () => modal.classList.remove("open");
+
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) modal.classList.remove("open");
+  });
+}
+
+// ============================================================================
+// 7. RESPONSIVE SIDEBAR & MOBILE DRAWER
+// ============================================================================
+function initResponsiveNavigation() {
+  const sidebar = document.querySelector(".app-sidebar");
+  const mobileToggle = document.getElementById("mobileMenuBtn");
+  const sidebarClose = document.getElementById("sidebarCloseBtn");
+
+  // Ensure backdrop element exists
+  let backdrop = document.querySelector(".sidebar-backdrop");
+  if (!backdrop) {
+    backdrop = document.createElement("div");
+    backdrop.className = "sidebar-backdrop";
+    document.body.appendChild(backdrop);
+  }
+
+  function openDrawer() {
+    if (sidebar) sidebar.classList.add("drawer-open");
+    if (backdrop) backdrop.classList.add("active");
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeDrawer() {
+    if (sidebar) sidebar.classList.remove("drawer-open");
+    if (backdrop) backdrop.classList.remove("active");
+    document.body.style.overflow = "";
+  }
+
+  if (mobileToggle) {
+    mobileToggle.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (sidebar && sidebar.classList.contains("drawer-open")) {
+        closeDrawer();
+      } else {
+        openDrawer();
       }
     });
   }
-}
 
-function formatDate(dateString) {
-  if (!dateString) return "";
-  try {
-    const options = { year: "numeric", month: "short", day: "numeric" };
-    const dateObj = new Date(dateString + "T00:00:00");
-    return dateObj.toLocaleDateString("en-US", options);
-  } catch (e) {
-    return dateString;
+  if (sidebarClose) {
+    sidebarClose.addEventListener("click", (e) => {
+      e.stopPropagation();
+      closeDrawer();
+    });
   }
+
+  if (backdrop) {
+    backdrop.addEventListener("click", closeDrawer);
+  }
+
+  // Close drawer on Escape key
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && sidebar && sidebar.classList.contains("drawer-open")) {
+      closeDrawer();
+    }
+  });
+
+  // Close drawer when clicking a navigation link on mobile
+  const drawerLinks = sidebar ? sidebar.querySelectorAll(".sidebar-link, a") : [];
+  drawerLinks.forEach((link) => {
+    link.addEventListener("click", () => {
+      if (window.innerWidth < 1024) {
+        closeDrawer();
+      }
+    });
+  });
+
+  // Highlight active menu item based on window.location
+  const currentPath = window.location.pathname.split("/").pop() || "index.html";
+  const allNavLinks = document.querySelectorAll(".sidebar-link, .bottom-nav-item");
+  allNavLinks.forEach((link) => {
+    const href = link.getAttribute("href");
+    if (href === currentPath || (currentPath === "" && href === "index.html")) {
+      link.classList.add("active");
+    } else {
+      link.classList.remove("active");
+    }
+  });
 }
 
+// ============================================================================
+// 8. STRING & HTML UTILITIES
+// ============================================================================
 function escapeHTML(str) {
   if (!str) return "";
   return String(str)
@@ -637,21 +633,29 @@ function escapeHTML(str) {
     .replace(/'/g, "&#039;");
 }
 
+function formatDate(dateString) {
+  if (!dateString) return "";
+  try {
+    const dateObj = new Date(dateString + "T00:00:00");
+    return dateObj.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  } catch (e) {
+    return dateString;
+  }
+}
+
 // ============================================================================
-// DOM CONTENT LOADED ENTRY POINT
+// 9. DOM INITIALIZATION
 // ============================================================================
 document.addEventListener("DOMContentLoaded", () => {
-  initMobileNavigation();
-  initNotificationCenter();
-  initSavedItemsModal();
-
-  // Initialize data storage
+  // Ensure demo data is loaded into storage
   getStoredReports();
   getStoredSpaces();
   getStoredEvents();
   getNotifications();
 
-  // Update badge counters
-  updateNotificationBadge();
-  updateSavedBadgeCount();
+  initResponsiveNavigation();
+  initDynamicGreeting();
+  initNotificationCenter();
+  initProfileModal();
+  updateBadges();
 });
