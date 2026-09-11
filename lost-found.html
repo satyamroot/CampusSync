@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Lost &amp; Found — CampusSync</title>
+  <link rel="icon" type="image/svg+xml" href="assets/favicon/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon/favicon-32x32.png">
+  <link rel="apple-touch-icon" href="assets/favicon/apple-touch-icon.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- HEADER & NAVIGATION -->
+  <header class="site-header">
+    <div class="container header-container">
+      <a href="index.html" class="logo">
+        <img src="assets/images/logo.svg" alt="CampusSync Logo" class="logo-icon-svg">
+        <span class="logo-text">Campus<strong>Sync</strong></span>
+      </a>
+
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu">
+        <span class="hamburger-bar"></span>
+        <span class="hamburger-bar"></span>
+        <span class="hamburger-bar"></span>
+      </button>
+
+      <nav class="site-nav" id="siteNav">
+        <ul class="nav-list">
+          <li><a href="index.html" class="nav-link">Home</a></li>
+          <li><a href="lost-found.html" class="nav-link active">Lost &amp; Found</a></li>
+          <li><a href="spaces.html" class="nav-link">Spaces</a></li>
+          <li><a href="events.html" class="nav-link">Events</a></li>
+        </ul>
+      </nav>
+
+      <!-- Action Controls -->
+      <div class="header-actions">
+        <button class="icon-action-btn" id="savedItemsBtn" title="Saved Items" aria-label="Saved items">
+          <span>🔖</span>
+          <span class="notif-badge-pill" id="savedCountBadge" style="display: none;">0</span>
+        </button>
+
+        <div class="notif-wrapper">
+          <button class="icon-action-btn" id="notifBtn" title="CampusSync Notifications" aria-label="Notifications">
+            <span>🔔</span>
+            <span class="notif-badge-pill" id="notifBadge" style="display: none;">0</span>
+          </button>
+          <div class="notif-dropdown" id="notifDropdown">
+            <div class="notif-header">
+              <h4>Notifications (Prototype)</h4>
+              <button class="btn btn-outline btn-sm" id="clearNotifsBtn" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">Clear</button>
+            </div>
+            <div class="notif-list" id="notifList"></div>
+          </div>
+        </div>
+
+        <a href="report.html" class="btn btn-primary nav-btn-primary">Report Lost / Found</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main class="page-main">
+    <div class="container">
+
+      <!-- PAGE HEADER -->
+      <section class="page-header">
+        <div class="page-header-text">
+          <span class="badge badge-primary">Flagship Feature</span>
+          <h1 class="page-title">Smart Lost &amp; Found Board</h1>
+          <p class="page-subtitle">
+            Centralized intake board powered by <strong>Smart Multi-Criteria Matching</strong>.
+            Cross-references Lost reports with Found items using transparent category, colour, and location attributes.
+          </p>
+        </div>
+        <div class="page-header-actions">
+          <a href="report.html?type=lost" class="btn btn-lost">+ Report Lost</a>
+          <a href="report.html?type=found" class="btn btn-found">+ Report Found</a>
+        </div>
+      </section>
+
+      <!-- PROTOTYPE DISCLAIMER BANNER -->
+      <aside class="notice-banner">
+        <span class="notice-icon">ℹ️</span>
+        <div class="notice-text">
+          <strong>Smart Multi-Criteria Matching:</strong> Evaluates Category (+3), Colour (+2), Location (+2), and Keyword overlap (+1) out of 8 max points.
+          Results are presented responsibly as <em>"Possible Match"</em> (never "Confirmed Match") because students must verify ownership in person.
+          Contact emails are stored privately in session memory.
+        </div>
+      </aside>
+
+      <!-- SEARCH & MULTI-FILTER TOOLBAR -->
+      <section class="filter-toolbar">
+        <!-- Search Input -->
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input
+            type="text"
+            id="searchInput"
+            class="search-input"
+            placeholder="Search reports by item name, colour, location, or description..."
+            aria-label="Search reports"
+          >
+          <button id="clearSearchBtn" class="clear-btn" title="Clear search">&times;</button>
+        </div>
+
+        <!-- Filter Controls -->
+        <div class="filter-controls">
+          <!-- Type Filter Buttons -->
+          <div class="type-filter-group" role="group" aria-label="Filter by report type">
+            <button class="filter-btn active" data-type="all">All Items</button>
+            <button class="filter-btn" data-type="lost">Lost Only</button>
+            <button class="filter-btn" data-type="found">Found Only</button>
+          </div>
+
+          <!-- Category Select Filter -->
+          <div class="category-filter-wrapper">
+            <select id="categoryFilter" class="select-input" aria-label="Filter by category">
+              <option value="all">All Categories</option>
+              <option value="Personal">Personal (Wallets, Bags, Bottles)</option>
+              <option value="Electronics">Electronics (Calculators, Laptops, Earbuds)</option>
+              <option value="Cards/IDs">Cards &amp; ID Badges</option>
+              <option value="Books/Notes">Books &amp; Notebooks</option>
+              <option value="Clothing">Clothing &amp; Accessories</option>
+              <option value="Other">Other Items</option>
+            </select>
+          </div>
+
+          <!-- Colour Filter Select -->
+          <div class="category-filter-wrapper">
+            <select id="colourFilter" class="select-input" aria-label="Filter by colour">
+              <option value="all">All Colours</option>
+              <option value="Black">Black</option>
+              <option value="Blue">Blue</option>
+              <option value="White">White</option>
+              <option value="Red">Red</option>
+              <option value="Silver">Silver / Grey</option>
+            </select>
+          </div>
+
+          <!-- Location Filter Select -->
+          <div class="category-filter-wrapper">
+            <select id="locationFilter" class="select-input" aria-label="Filter by location">
+              <option value="all">All Locations</option>
+              <option value="Library">Central Library</option>
+              <option value="Lab">Computer Labs</option>
+              <option value="Cafeteria">Cafeteria</option>
+              <option value="Sports">Sports Complex</option>
+              <option value="Auditorium">Auditorium</option>
+              <option value="Block">Academic Blocks</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <!-- SMART MATCH RADAR DRAWER -->
+      <section class="match-radar-section" id="matchRadarSection">
+        <div class="radar-header">
+          <div class="radar-title-group">
+            <span class="radar-pulse-dot"></span>
+            <h2 class="radar-title">Smart Match Radar</h2>
+            <span class="badge badge-amber" id="matchCountBadge">0 Possible Pairs</span>
+          </div>
+          <p class="radar-desc">
+            Rule-based engine automatically pairs active Lost reports with candidate Found items.
+            Scoring evaluates <strong>Category (+3)</strong>, <strong>Colour (+2)</strong>, <strong>Location (+2)</strong>, and <strong>Keyword overlap (+1)</strong>.
+          </p>
+        </div>
+
+        <!-- Populated dynamically by lost-found.js -->
+        <div class="matches-grid" id="matchesContainer"></div>
+      </section>
+
+      <!-- ALL REPORTS LISTING SECTION -->
+      <section class="reports-section">
+        <div class="section-heading-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+          <h2 style="font-size: 1.6rem; font-weight: 700; color: #fff;">Campus Reports (<span id="reportsCount">0</span>)</h2>
+          <span style="font-size: 0.9rem; color: var(--text-muted);" id="filterStatusText">Showing all records</span>
+        </div>
+
+        <!-- Dynamic Grid Container -->
+        <div class="reports-grid" id="reportsGrid">
+          <div class="loading-state" id="reportsLoading">
+            <p>Loading campus reports...</p>
+          </div>
+        </div>
+
+        <!-- Empty state message -->
+        <div class="empty-state" id="emptyState" style="display: none;">
+          <div class="empty-icon">📭</div>
+          <h3 class="empty-title">No matching items found</h3>
+          <p class="empty-desc">Try adjusting your search terms or clearing filter selections.</p>
+          <button class="btn btn-secondary" id="resetFiltersBtn">Reset All Filters</button>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- SAVED ITEMS MODAL -->
+  <div class="custom-modal" id="savedItemsModal" role="dialog" aria-label="Saved items">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 style="color: #fff; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+          <span>🔖</span> Saved Bookmarks
+        </h3>
+        <button class="modal-close" id="closeSavedModal">&times;</button>
+      </div>
+      <div class="saved-tabs-row">
+        <button class="saved-tab-btn active" id="savedTabEvents">Saved Events</button>
+        <button class="saved-tab-btn" id="savedTabSpaces">Saved Spaces</button>
+      </div>
+      <div class="saved-items-list" id="savedItemsList"></div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="site-footer">
+    <div class="container footer-container">
+      <div class="footer-info">
+        <div class="footer-logo">
+          <img src="assets/images/logo.svg" alt="CampusSync" style="display: inline-block; width: 24px; height: 24px; vertical-align: middle; margin-right: 6px;">
+          Campus<strong>Sync</strong>
+        </div>
+        <p class="footer-tagline">Your Campus, In Sync. One platform for everyday campus discovery.</p>
+        <p class="footer-credit">Built by a team of 4 first-semester B.Tech CSE students for a 36-Hour Hackathon.</p>
+      </div>
+
+      <div class="footer-nav">
+        <h4>Navigation</h4>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="lost-found.html">Lost &amp; Found</a></li>
+          <li><a href="report.html">Report Lost / Found</a></li>
+          <li><a href="spaces.html">Campus Spaces</a></li>
+          <li><a href="events.html">Campus Events</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-disclaimer">
+        <h4>Judge-Accuracy Notice</h4>
+        <p>
+          Frontend Prototype Demo. Uses browser <code>localStorage</code> for state persistence.
+          No live university server, real-time IoT occupancy, or automatic email transmission is claimed.
+        </p>
+      </div>
+    </div>
+
+    <div class="footer-bottom text-center">
+      <p>&copy; 2026 CampusSync Team. All rights reserved. Pure HTML5, CSS3, &amp; Vanilla JavaScript.</p>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="data/demo-data.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/lost-found.js"></script>
+</body>
+</html>

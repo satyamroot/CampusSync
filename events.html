@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Campus Events — CampusSync</title>
+  <link rel="icon" type="image/svg+xml" href="assets/favicon/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon/favicon-32x32.png">
+  <link rel="apple-touch-icon" href="assets/favicon/apple-touch-icon.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- HEADER & NAVIGATION -->
+  <header class="site-header">
+    <div class="container header-container">
+      <a href="index.html" class="logo">
+        <img src="assets/images/logo.svg" alt="CampusSync Logo" class="logo-icon-svg">
+        <span class="logo-text">Campus<strong>Sync</strong></span>
+      </a>
+
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu">
+        <span class="hamburger-bar"></span>
+        <span class="hamburger-bar"></span>
+        <span class="hamburger-bar"></span>
+      </button>
+
+      <nav class="site-nav" id="siteNav">
+        <ul class="nav-list">
+          <li><a href="index.html" class="nav-link">Home</a></li>
+          <li><a href="lost-found.html" class="nav-link">Lost &amp; Found</a></li>
+          <li><a href="spaces.html" class="nav-link">Spaces</a></li>
+          <li><a href="events.html" class="nav-link active">Events</a></li>
+        </ul>
+      </nav>
+
+      <!-- Action Controls -->
+      <div class="header-actions">
+        <button class="icon-action-btn" id="savedItemsBtn" title="Saved Items" aria-label="Saved items">
+          <span>🔖</span>
+          <span class="notif-badge-pill" id="savedCountBadge" style="display: none;">0</span>
+        </button>
+
+        <div class="notif-wrapper">
+          <button class="icon-action-btn" id="notifBtn" title="CampusSync Notifications" aria-label="Notifications">
+            <span>🔔</span>
+            <span class="notif-badge-pill" id="notifBadge" style="display: none;">0</span>
+          </button>
+          <div class="notif-dropdown" id="notifDropdown">
+            <div class="notif-header">
+              <h4>Notifications (Prototype)</h4>
+              <button class="btn btn-outline btn-sm" id="clearNotifsBtn" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">Clear</button>
+            </div>
+            <div class="notif-list" id="notifList"></div>
+          </div>
+        </div>
+
+        <a href="report.html" class="btn btn-primary nav-btn-primary">Report Lost / Found</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main class="page-main">
+    <div class="container">
+
+      <!-- PAGE HEADER -->
+      <section class="page-header">
+        <div class="page-header-text">
+          <span class="badge badge-primary">Campus Pulse</span>
+          <h1 class="page-title">Campus Events Discovery</h1>
+          <p class="page-subtitle">
+            Stay updated with upcoming hackathons, technical workshops, sports tourneys, and club orientations.
+          </p>
+        </div>
+      </section>
+
+      <!-- PROTOTYPE DISCLAIMER BANNER -->
+      <aside class="notice-banner">
+        <span class="notice-icon">ℹ️</span>
+        <div class="notice-text">
+          <strong>Demo Event Feed:</strong> Events and RSVP counts are shown for hackathon prototype testing.
+          In a future version, official event registration will link to student club organizers.
+          Use the <strong>Bookmark</strong> button to save activities to your local session planner.
+        </div>
+      </aside>
+
+      <!-- SEARCH & FILTER TOOLBAR -->
+      <section class="filter-toolbar">
+        <!-- Search Input -->
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input
+            type="text"
+            id="eventSearch"
+            class="search-input"
+            placeholder="Search events by title, club organizer, or venue..."
+            aria-label="Search campus events"
+          >
+          <button id="clearEventSearchBtn" class="clear-btn" title="Clear search">&times;</button>
+        </div>
+
+        <!-- Category Filter Pills -->
+        <div class="filter-controls">
+          <div class="type-filter-group" id="eventCategoryFilters" role="group" aria-label="Filter by event category">
+            <button class="filter-btn active" data-category="all">All Events</button>
+            <button class="filter-btn" data-category="Technical">Technical</button>
+            <button class="filter-btn" data-category="Workshop">Workshops</button>
+            <button class="filter-btn" data-category="Hackathon">Hackathons</button>
+            <button class="filter-btn" data-category="Sports">Sports</button>
+            <button class="filter-btn" data-category="Cultural">Cultural</button>
+            <button class="filter-btn" data-category="Career">Career</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- EVENTS GRID SECTION -->
+      <section class="events-section">
+        <div class="section-heading-row">
+          <h2 class="section-title">Upcoming Campus Activities (<span id="eventsCount">0</span>)</h2>
+          <span class="section-meta" id="eventFilterMeta">Showing all upcoming events</span>
+        </div>
+
+        <!-- Dynamic Grid Container -->
+        <div class="cards-grid events-grid" id="eventsGrid">
+          <div class="loading-state">
+            <p>Loading campus events...</p>
+          </div>
+        </div>
+
+        <!-- Empty State Message -->
+        <div class="empty-state" id="eventsEmptyState" style="display: none;">
+          <div class="empty-icon">📅</div>
+          <h3 class="empty-title">No events match your criteria</h3>
+          <p class="empty-desc">Try clearing your search query or selecting a different category.</p>
+          <button class="btn btn-secondary" id="resetEventFiltersBtn">Reset Event Filters</button>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- SAVED ITEMS MODAL -->
+  <div class="custom-modal" id="savedItemsModal" role="dialog" aria-label="Saved items">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 style="color: #fff; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+          <span>🔖</span> Saved Bookmarks
+        </h3>
+        <button class="modal-close" id="closeSavedModal">&times;</button>
+      </div>
+      <div class="saved-tabs-row">
+        <button class="saved-tab-btn active" id="savedTabEvents">Saved Events</button>
+        <button class="saved-tab-btn" id="savedTabSpaces">Saved Spaces</button>
+      </div>
+      <div class="saved-items-list" id="savedItemsList"></div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="site-footer">
+    <div class="container footer-container">
+      <div class="footer-info">
+        <div class="footer-logo">
+          <img src="assets/images/logo.svg" alt="CampusSync" style="display: inline-block; width: 24px; height: 24px; vertical-align: middle; margin-right: 6px;">
+          Campus<strong>Sync</strong>
+        </div>
+        <p class="footer-tagline">Your Campus, In Sync. One platform for everyday campus discovery.</p>
+        <p class="footer-credit">Built by a team of 4 first-semester B.Tech CSE students for a 36-Hour Hackathon.</p>
+      </div>
+
+      <div class="footer-nav">
+        <h4>Navigation</h4>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="lost-found.html">Lost &amp; Found</a></li>
+          <li><a href="report.html">Report Lost / Found</a></li>
+          <li><a href="spaces.html">Campus Spaces</a></li>
+          <li><a href="events.html">Campus Events</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-disclaimer">
+        <h4>Judge-Accuracy Notice</h4>
+        <p>
+          Frontend Prototype Demo. Uses browser <code>localStorage</code> for state persistence.
+          No live university server, real-time IoT occupancy, or automatic email transmission is claimed.
+        </p>
+      </div>
+    </div>
+
+    <div class="footer-bottom text-center">
+      <p>&copy; 2026 CampusSync Team. All rights reserved. Pure HTML5, CSS3, &amp; Vanilla JavaScript.</p>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="data/demo-data.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/events.js"></script>
+</body>
+</html>
+
+
