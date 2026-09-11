@@ -44,24 +44,34 @@ $$\text{HTML5} + \text{CSS3} + \text{Vanilla JavaScript} + \text{Browser localSt
 
 ---
 
-## 🎯 Three Core Modules
+## 🎯 Four Core Modules
 
-### 1. 🔍 Smart Lost & Found (Flagship Feature)
-- **Dual Intake Form (`report.html`):** Log lost items or report found items with item name, category, colour, location, date, description, and contact info.
-- **Live Board (`lost-found.html`):** Multi-filtering by type (*All*, *Lost*, *Found*), category (*Personal*, *Electronics*, *Cards/IDs*, etc.), colour, location, and instant keyword search.
-- **Smart Match Radar:** Compares active Lost reports against candidate Found items using our explainable rule-based scoring engine (+3 category, +2 colour, +2 location, +1 keywords, max 8).
-- **Ethical AI Guardrail:** Strictly avoids false certainty. Pairs are labeled cautiously as *"Possible Match"* or *"Similar Item"* (NEVER *"Confirmed Match"*).
-- **🔒 Student Contact Privacy Guardrail:** Registered emails are never exposed publicly on cards. Clicking the badge opens a secure privacy modal explaining mediated verification.
+### 1. 📍 WHERE IS YOUR BLOCK? (Campus Walking Navigation)
+- **Step 1 — Search:** Autocomplete search across all academic blocks, lecture halls, libraries, and campus zones with quick suggestion chips (`Block S`, `Block 32`, `Library`, `Cafeteria`, etc.).
+- **Step 2 — Confirm Destination:** Clean confirmation card displaying building photo, department info, facilities, and distance estimate before routing begins.
+- **Step 3 — Geolocation & Permission Handling:** Requests authentic browser GPS coordinates with a graceful fallback selector if location access is unavailable.
+- **Step 4 — Interactive Dark Map:** Leaflet.js map with CartoDB Dark Matter tiles, campus building polygons, labeled destinations, pulsing user pin, and glowing walking route polylines.
+- **Step 5 — Dynamic Route Metrics:** Floating route card displaying walking minutes, distance in meters, dynamic arrival time (ETA), and `[ Start Walking ]`.
+- **Step 6 — Live Navigation & Off-Route Detection:** Real-time distance and ETA countdowns via `watchPosition`, progress fill bar, automatic off-route detection (>45m) with auto-recalculation, arrival celebration, and an indoor walk step simulator for demo presentations.
 
-### 2. 🏛️ Campus Spaces Directory (`spaces.html`)
-- Directory of 8 campus zones across **Study**, **Food**, **Recreation**, **Academic**, and **Quiet** categories.
-- Displays capacity, location, facility tags (*WiFi*, *Power Outlets*, *AC*, *Whiteboards*), "Suitable for" tasks, and typical availability disclosures.
-- Interactive bookmarking button saving spaces to the unified bookmarks modal.
+### 2. 🔎 SMART LOST & FOUND
+- **Dual Intake:** Log lost belongings or report found items with client-side image upload preview (`FileReader`), item name, category, location, date, description, and contact info.
+- **Live Board:** Multi-filtering by report type (*All*, *Lost*, *Found*), category (*Electronics*, *Bags*, *ID Cards*, *Books*, *Personal*, *Keys*), location, and keyword search.
+- **Smart Match Radar:** Compares active Lost reports against candidate Found items using our explainable rule-based scoring engine (+3 category, +2 colour, +2 location, +1 keywords, max 8/8).
+- **Item Details & Claim Modal:** Inspect item photo, description, matching breakdown, and initiate protected student claim mediation.
 
-### 3. 🎉 Campus Events Discovery (`events.html`)
-- Curated timeline of upcoming technical workshops, hackathons, sports tourneys, and club orientations.
-- Filter by categories (*Technical*, *Workshops*, *Hackathons*, *Sports*, *Cultural*, *Career*).
-- Interactive **One-Click Demo RSVP Counter** and **Activity Bookmarking** persisting in `localStorage`.
+### 3. 📅 CAMPUS EVENTS DISCOVERY
+- **🔴 Happening Now:** Prominent live banner with glowing pulse indicator, elapsed duration ("Started 25 mins ago"), and live countdown timer.
+- **Upcoming & Completed Feeds:** Curated timeline of hackathons, technical workshops, sports tourneys, and cultural fests with category badges and event banners.
+- **Interactive RSVP & Bookmarking:** One-click demo RSVP counter (+1 / -1) and bookmarking persisting in `localStorage`.
+- **Venue Navigation:** Event Details modal includes a `[ 📍 Navigate to Venue ]` button linking directly to the campus walking navigation engine.
+
+### 4. 🏫 CAMPUS SPACES & EMPTY CLASSROOMS
+- **Empty Classrooms Spotlight:** Real-time vacant room directory highlighting **Block S — Room 204** (🟢 EMPTY, Capacity 60, Available 6:00 PM – 8:00 PM) and **Block 32 — Room 301** (🟢 EMPTY, Capacity 45, Available 7:00 PM – 9:00 PM).
+- **Quiet Spaces Near You:** Less-crowded study cubicles, coding labs, and libraries with visual occupancy percentages and noise ratings.
+- **Smart Recommendations:** Highlights the highest scoring study spot based on current capacity, noise rating, and walking distance.
+- **Hourly Availability Timeline:** Hour-by-hour availability bars (`Now | 6 PM | 7 PM | 8 PM | 9 PM`) highlighting vacant and busy slots.
+- **Direct Block Routing:** Space details modal connects directly to Block Navigation with a `[ 📍 Navigate Here ]` button.
 
 ---
 
@@ -69,10 +79,11 @@ $$\text{HTML5} + \text{CSS3} + \text{Vanilla JavaScript} + \text{Browser localSt
 
 | Layer | Technology | Rationale |
 | :--- | :--- | :--- |
-| **Markup** | HTML5 (Semantic) | Standard elements (`<header>`, `<nav>`, `<main>`, `<article>`, `<aside>`, `<footer>`) with zero framework abstractions. |
-| **Styling** | CSS3 (Modern Vanilla) | CSS Custom Properties (variables), CSS Grid, Flexbox, media queries for mobile/tablet/desktop. |
-| **Logic** | Vanilla JavaScript (ES6+) | Native DOM methods, array methods (`filter()`, `map()`, `find()`), event listeners, zero npm packages. |
-| **Persistence** | Browser `localStorage` | Client-side key-value string storage for data persistence across page reloads. |
+| **Markup** | HTML5 (Semantic) | Clean semantic markup with modern accessible elements. |
+| **Styling** | CSS3 (Modern Vanilla) | Dark glassmorphism, responsive sidebar layout, CSS custom properties, backdrop filters. |
+| **Logic** | Vanilla JavaScript (ES6+) | Native DOM methods, rule-based matching engine, geolocation tracking, zero build dependencies. |
+| **Mapping** | Leaflet.js + CartoDB Dark | Interactive campus maps, route polylines, custom pulsing markers, dark theme without private API keys. |
+| **Persistence** | Browser `localStorage` | Client-side key-value JSON storage for demo data, reports, RSVPs, and bookmarks. |
 
 ---
 
@@ -80,32 +91,30 @@ $$\text{HTML5} + \text{CSS3} + \text{Vanilla JavaScript} + \text{Browser localSt
 
 ```
 CampusSync/
-├── index.html              # Homepage: Split hero, SaaS dashboard preview, impact stats
-├── lost-found.html         # Smart Lost & Found board with radar, category/colour/loc filters
-├── report.html             # Dual intake form (Report Lost / Report Found) with instant validation
-├── spaces.html             # Campus Spaces directory (Study, Food, Recreation, Academic, Quiet)
-├── events.html             # Campus Events feed with category filters, RSVP & bookmarks
+├── index.html              # Unified Dashboard: Greeting, search + map preview, quick actions, live ticker
+├── navigation.html         # Where is your Block? Full 6-step walking navigation & GPS engine
+├── lost-found.html         # Smart Lost & Found board with radar, category/location filters, modals
+├── spaces.html             # Campus Spaces directory with Empty Classrooms & availability timelines
+├── events.html             # Campus Events feed with 🔴 Happening Now, upcoming cards & RSVP
+├── report.html             # Dedicated report intake form with image upload preview
 │
 ├── css/
-│   └── style.css           # Glassmorphic SaaS design system, responsive down to 320px
+│   └── style.css           # Premium Dark Glassmorphism design system & responsive layout
 │
 ├── js/
-│   ├── main.js             # Shared navigation, notification center, bookmarks modal, storage
-│   ├── lost-found.js       # Intake validation, rule-based matching engine, private contact modal
-│   ├── spaces.js           # Spaces filtering, facilities rendering, bookmarking
-│   └── events.js           # Events filtering, RSVP counter, activity bookmarking
+│   ├── main.js             # Shared data storage, dynamic greeting, notification center, profile modal
+│   ├── navigation.js       # Walking routing engine, GPS tracking, step simulator & off-route alerts
+│   ├── lost-found.js       # Intake validation, rule-based matching engine, item details & claim modal
+│   ├── spaces.js           # Spaces directory filtering, occupancy meters, availability timelines
+│   └── events.js           # Live countdowns, RSVP counters, activity bookmarking & venue routing
 │
 ├── data/
-│   └── demo-data.js        # Seed demo records (10 Lost/Found pairs, 8 Spaces, 8 Events)
-│
-├── assets/
-│   ├── images/             # SVG logo and authentic campus background (lpu_campus.jpg)
-│   └── favicon/            # SVG and PNG cross-platform favicons
+│   └── demo-data.js        # Realistic seed dataset (Locations, Lost/Found items, Spaces, Events, Ticker)
 │
 ├── docs/
-│   └── PROJECT_REPORT.md   # Comprehensive internal report, diagrams, pitch & judge Q&A
+│   └── PROJECT_REPORT.md   # Project technical overview and architecture
 │
-└── README.md               # Hackathon public documentation
+└── README.md               # Public documentation
 ```
 
 ---
